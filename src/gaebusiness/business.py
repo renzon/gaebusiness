@@ -26,7 +26,7 @@ class Command(object):
         '''
         pass
 
-    def do_business(self, stop_on_error=False):
+    def do_business(self, stop_on_error=True):
         '''
         Must do the main business of use case
         '''
@@ -38,7 +38,7 @@ class Command(object):
         '''
         return []
 
-    def execute(self, stop_on_error=False):
+    def execute(self, stop_on_error=True):
         self.set_up()
         self.do_business(stop_on_error)
         ndb.put_multi(to_model_list(self.commit()))
@@ -55,7 +55,7 @@ class CommandList(Command):
         for cmd in self.commands:
             cmd.set_up()
 
-    def do_business(self, stop_on_error=False):
+    def do_business(self, stop_on_error=True):
         for cmd in self.commands:
             if not cmd.errors:
                 cmd.do_business(stop_on_error)
