@@ -43,6 +43,9 @@ class CommandMockWithErrorOnBusiness(CommandMock):
 
 
 class BusinessTests(GAETestCase):
+    def test_execute_chaining(self):
+        self.assertEqual('foo', CommandMock('foo').execute().result.ppt)
+
     def testCommandInit(self):
         cmd = Command(a=1, b=2)
         self.assertEqual(1, cmd.a)
@@ -68,7 +71,7 @@ class BusinessTests(GAETestCase):
         MOCK_2 = "mock 2"
         commands = [CommandMock(MOCK_1), CommandMock(MOCK_2)]
         command_list = CommandList(commands)
-        errors = command_list.execute()
+        errors = command_list.execute().errors
         self.assert_usecase_executed(commands[0], MOCK_1)
         self.assert_usecase_executed(commands[1], MOCK_2)
         self.assertDictEqual({}, errors)
@@ -79,7 +82,7 @@ class BusinessTests(GAETestCase):
         MOCK_2 = "mock 2"
         commands = [CommandMockWithErrorOnBusiness(MOCK_0), CommandMock(MOCK_1, True), CommandMock(MOCK_2)]
         command_list = CommandList(commands)
-        errors = command_list.execute()
+        errors = command_list.execute(False).errors
         self.assert_usecase_not_executed(commands[0])
         self.assert_usecase_not_executed(commands[1])
         self.assert_usecase_executed(commands[2], MOCK_2)
@@ -90,7 +93,7 @@ class BusinessTests(GAETestCase):
         MOCK_2 = "mock 2"
         commands = [CommandMock(MOCK_1, True), CommandMock(MOCK_2)]
         command_list = CommandList(commands)
-        errors = command_list.execute(True)
+        errors = command_list.execute(True).errors
         self.assert_usecase_not_executed(commands[0])
         self.assert_usecase_not_executed(commands[1])
         self.assertDictEqual({ERROR_KEY: ERROR_MSG}, errors)
@@ -101,7 +104,7 @@ class BusinessTests(GAETestCase):
         MOCK_2 = "mock 2"
         commands = [CommandMockWithErrorOnBusiness(MOCK_0), CommandMock(MOCK_1, True), CommandMock(MOCK_2)]
         command_list = CommandList(commands)
-        errors = command_list.execute(True)
+        errors = command_list.execute(True).errors
         for cmd in command_list.commands:
             self.assert_usecase_not_executed(cmd)
         self.assertDictEqual({ANOTHER_ERROR_KEY: ANOTHER_ERROR_MSG}, errors)

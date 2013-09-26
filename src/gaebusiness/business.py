@@ -42,7 +42,7 @@ class Command(object):
         self.set_up()
         self.do_business(stop_on_error)
         ndb.put_multi(to_model_list(self.commit()))
-        return self.errors
+        return self
 
 
 class CommandList(Command):
