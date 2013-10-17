@@ -16,6 +16,9 @@ class Command(object):
         for k, v in kwargs.iteritems():
             setattr(self, k, v)
 
+    def __add__(self, other):
+        return CommandList([self, other])
+
     def add_error(self, key, msg):
         self.errors[key] = msg
 
