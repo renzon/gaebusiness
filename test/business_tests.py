@@ -105,7 +105,7 @@ class BusinessTests(GAETestCase):
         commands = [CommandMockWithErrorOnBusiness(MOCK_0), CommandMock(MOCK_1, True), CommandMock(MOCK_2)]
         command_list = CommandList(commands)
         errors = command_list.execute(True).errors
-        for cmd in command_list.commands:
+        for cmd in command_list:
             self.assert_usecase_not_executed(cmd)
         self.assertDictEqual({ANOTHER_ERROR_KEY: ANOTHER_ERROR_MSG}, errors)
 

@@ -48,15 +48,18 @@ class Command(object):
 class CommandList(Command):
     def __init__(self, commands, **kwargs):
         super(CommandList, self).__init__(**kwargs)
-        self.commands = commands
+        self.__commands = commands
+
+    def __getitem__(self, index):
+        return self.__commands[index]
 
 
     def set_up(self):
-        for cmd in self.commands:
+        for cmd in self:
             cmd.set_up()
 
     def do_business(self, stop_on_error=True):
-        for cmd in self.commands:
+        for cmd in self:
             if not cmd.errors:
                 cmd.do_business(stop_on_error)
             self.errors.update(cmd.errors)
@@ -66,6 +69,6 @@ class CommandList(Command):
 
     def commit(self):
         to_commit = []
-        for cmd in self.commands:
+        for cmd in self:
             to_commit.extend(to_model_list(cmd.commit()))
         return to_commit
