@@ -52,7 +52,7 @@ class BusinessTests(GAETestCase):
         self.assertEqual(2, cmd.b)
 
     def testCommandListInit(self):
-        cmd = CommandList([], c=1, d=2)
+        cmd = CommandList([CommandMock('foo')], c=1, d=2)
         self.assertEqual(1, cmd.c)
         self.assertEqual(2, cmd.d)
 
@@ -75,6 +75,37 @@ class BusinessTests(GAETestCase):
         errors = command_list.execute().errors
         self.assert_usecase_executed(mock_1, MOCK_1)
         self.assert_usecase_executed(mock_2, MOCK_2)
+        self.assertDictEqual({}, errors)
+
+    def test_explicit_main_command(self):
+        MOCK_0 = "mock 0"
+        MOCK_1 = "mock 1"
+
+        class CommandListComposition(CommandList):
+            def __init__(self, label, label_1):
+                main_command = CommandMock(label)
+                CommandList.__init__(self, main_command + CommandMock(label_1), main_command)
+
+        command_list = CommandListComposition(MOCK_0, MOCK_1)
+        errors = command_list.execute().errors
+        self.assert_usecase_executed(command_list[0], MOCK_0)
+        self.assert_usecase_executed(command_list[1], MOCK_1)
+        self.assertEqual(MOCK_0, command_list.result.ppt)
+        self.assertDictEqual({}, errors)
+
+    def test_implicit_main_command(self):
+        MOCK_0 = "mock 0"
+        MOCK_1 = "mock 1"
+
+        class CommandListComposition(CommandList):
+            def __init__(self, label, label_1):
+                CommandList.__init__(self, CommandMock(label) + CommandMock(label_1))
+
+        command_list = CommandListComposition(MOCK_0, MOCK_1)
+        errors = command_list.execute().errors
+        self.assert_usecase_executed(command_list[0], MOCK_0)
+        self.assert_usecase_executed(command_list[1], MOCK_1)
+        self.assertEqual(MOCK_1, command_list.result.ppt)  # it takes the last command as de default main command
         self.assertDictEqual({}, errors)
 
     def test_business_composition(self):

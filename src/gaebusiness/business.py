@@ -49,13 +49,14 @@ class Command(object):
 
 
 class CommandList(Command):
-    def __init__(self, commands, **kwargs):
+    def __init__(self, commands, main_command=None, **kwargs):
         super(CommandList, self).__init__(**kwargs)
         self.__commands = commands
+        self.__main_command = main_command or self[-1]
+
 
     def __getitem__(self, index):
         return self.__commands[index]
-
 
     def set_up(self):
         for cmd in self:
@@ -67,7 +68,9 @@ class CommandList(Command):
                 cmd.do_business(stop_on_error)
             self.errors.update(cmd.errors)
             if stop_on_error and self.errors:
+                self.result = self.__main_command.result
                 return self.errors
+        self.result = self.__main_command.result
         return self.errors
 
     def commit(self):
