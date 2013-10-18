@@ -64,8 +64,7 @@ class ModelSearchCommand(Command):
         if isinstance(start_cursor, basestring):
             start_cursor = Cursor(urlsafe=start_cursor)
         super(ModelSearchCommand, self).__init__(query=query, page_size=page_size, start_cursor=start_cursor,
-                                                 use_cache=use_cache,
-                                                 **kwargs)
+                                                 use_cache=use_cache, **kwargs)
 
     def set_up(self):
         if self.use_cache and self.start_cursor:
