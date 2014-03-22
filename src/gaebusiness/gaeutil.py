@@ -56,7 +56,12 @@ class TaskQueueCommand(Command):
 
 
 class ModelSearchCommand(Command):
-    def __init__(self, query, page_size=100, start_cursor=None, offset=0, use_cache=True, **kwargs):
+    def __init__(self, query, page_size=100, start_cursor=None,
+                 offset=0, use_cache=True, cache_begin=True, **kwargs):
+        self.cache_begin = cache_begin
+        self.use_cache = use_cache
+        self.page_size = page_size
+        self.query = query
         self.offset = offset
         self.__future = None
         self.__cached_keys = None
@@ -64,13 +69,23 @@ class ModelSearchCommand(Command):
         self.more = None
         if isinstance(start_cursor, basestring):
             start_cursor = Cursor(urlsafe=start_cursor)
-        super(ModelSearchCommand, self).__init__(query=query, page_size=page_size, start_cursor=start_cursor,
-                                                 use_cache=use_cache, **kwargs)
+        self.start_cursor = start_cursor
+        super(ModelSearchCommand, self).__init__(**kwargs)
+
+    def _cache_key(self):
+        if self.start_cursor:
+            return '%s%s' % (self.offset, self.start_cursor.urlsafe())
+
+        return '%s%s%s%s' % (self.query.kind,
+                             self.query.filters,
+                             self.query.orders,
+                             self.offset)
+
 
     def set_up(self):
-        if self.use_cache and self.start_cursor:
+        if self._should_cache():
             try:
-                cached_tuple = memcache.get(self.start_cursor.urlsafe())
+                cached_tuple = memcache.get(self._cache_key())
                 if cached_tuple:
                     self.__cached_keys, self.cursor, self.more = cached_tuple[0], cached_tuple[1], True
             except:
@@ -85,10 +100,13 @@ class ModelSearchCommand(Command):
         if self.__future:
             model_keys, self.cursor, self.more = self.__future.get_result()
             future = ndb.get_multi_async(model_keys)
-            if self.use_cache and self.start_cursor and len(model_keys) == self.page_size:
-                memcache.set(self.start_cursor.urlsafe(), (model_keys, self.cursor))
+            if self._should_cache() and len(model_keys) == self.page_size:
+                memcache.set(self._cache_key(), (model_keys, self.cursor))
             self.result = [f.get_result() for f in future]
         else:
             self.result = ndb.get_multi(self.__cached_keys)
+
+    def _should_cache(self):
+        return self.use_cache and (self.start_cursor or self.cache_begin)
 
 

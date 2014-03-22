@@ -79,19 +79,47 @@ class ModelSearchCommandTests(GAETestCase):
     def _assert_result(self, cmd, begin, end):
         self.assertListEqual(list(xrange(begin, end)), [some_model.index for some_model in cmd.result])
 
+    def test_cache_key(self):
+        key = ModelSearchCommand(SomeModel.query_index_ordered(), 3)._cache_key()
+        key_offset = ModelSearchCommand(SomeModel.query_index_ordered(), 3, offset=2)._cache_key()
+        key_other_query = ModelSearchCommand(SomeModel.query_index_ordered().filter(SomeModel.index == 1), 3,
+                                             offset=2)._cache_key()
+        key_other_query2 = ModelSearchCommand(SomeModel.query_index_ordered().filter(SomeModel.index == 2), 3,
+                                              offset=2)._cache_key()
+        self.assertNotEqual(key, key_offset)
+        self.assertNotEqual(key_offset, key_other_query)
+        self.assertNotEqual(key_other_query2, key_other_query)
+
     def test_cache(self):
         ndb.put_multi([SomeModel(index=i) for i in xrange(7)])
-        #asserting nothing is cached for the first results
-        cursor = ModelSearchCommand(SomeModel.query_index_ordered(), 3).execute().cursor
-        self.assertIsNone(memcache.get(cursor.urlsafe()))
+        #asserting the first results are not cached
+        cmd = ModelSearchCommand(SomeModel.query_index_ordered(), 3, cache_begin=False)
+        self.assertIsNone(memcache.get(cmd._cache_key()))
+
+        #asserting the first results are cached
+        cmd = ModelSearchCommand(SomeModel.query_index_ordered(), 3)
+        cursor = cmd.execute().cursor
+        cached = memcache.get(cmd._cache_key())
+        self.assertIsNotNone(cached)
+        cached_model_keys, cached_cursor = cached
+        cached_models = ndb.get_multi(cached_model_keys)
+        self.assertListEqual(list(xrange(3)), [some_model.index for some_model in cached_models])
 
         #asserting nothing is cached when using arg use_cache=False
-        cursor2 = ModelSearchCommand(SomeModel.query_index_ordered(), 3, cursor, use_cache=False).execute().cursor
-        self.assertIsNone(memcache.get(cursor.urlsafe()))
+        cmd = ModelSearchCommand(SomeModel.query_index_ordered(), 3, cursor, use_cache=False)
+        cursor2 = cmd.execute().cursor
+        self.assertIsNone(memcache.get(cmd._cache_key()))
 
         #asserting items are cached
-        ModelSearchCommand(SomeModel.query_index_ordered(), 3, cursor).execute()
-        cached_model_keys, cached_cursor = memcache.get(cursor.urlsafe())
+        cmd = ModelSearchCommand(SomeModel.query_index_ordered(), 3, cursor, cache_begin=False).execute()
+        cached_model_keys, cached_cursor = memcache.get(cmd._cache_key())
+        cached_models = ndb.get_multi(cached_model_keys)
+        self.assertListEqual(list(xrange(3, 6)), [some_model.index for some_model in cached_models])
+        self.assertEqual(cursor2, cached_cursor)
+
+        #asserting cached with offset
+        cmd = ModelSearchCommand(SomeModel.query_index_ordered(), 3, offset=3).execute()
+        cached_model_keys, cached_cursor = memcache.get(cmd._cache_key())
         cached_models = ndb.get_multi(cached_model_keys)
         self.assertListEqual(list(xrange(3, 6)), [some_model.index for some_model in cached_models])
         self.assertEqual(cursor2, cached_cursor)
