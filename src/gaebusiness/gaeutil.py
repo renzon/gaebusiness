@@ -56,7 +56,8 @@ class TaskQueueCommand(Command):
 
 
 class ModelSearchCommand(Command):
-    def __init__(self, query, page_size=100, start_cursor=None, use_cache=True, **kwargs):
+    def __init__(self, query, page_size=100, start_cursor=None, offset=0, use_cache=True, **kwargs):
+        self.offset = offset
         self.__future = None
         self.__cached_keys = None
         self.cursor = None
@@ -75,7 +76,10 @@ class ModelSearchCommand(Command):
             except:
                 pass
         if not self.__cached_keys:
-            self.__future = self.query.fetch_page_async(self.page_size, start_cursor=self.start_cursor, keys_only=True)
+            self.__future = self.query.fetch_page_async(self.page_size,
+                                                        start_cursor=self.start_cursor,
+                                                        offset=self.offset,
+                                                        keys_only=True)
 
     def do_business(self, stop_on_error=True):
         if self.__future:

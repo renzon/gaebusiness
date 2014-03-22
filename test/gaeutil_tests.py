@@ -76,6 +76,9 @@ class SomeModel(ndb.Model):
 
 
 class ModelSearchCommandTests(GAETestCase):
+    def _assert_result(self, cmd, begin, end):
+        self.assertListEqual(list(xrange(begin, end)), [some_model.index for some_model in cmd.result])
+
     def test_cache(self):
         ndb.put_multi([SomeModel(index=i) for i in xrange(7)])
         #asserting nothing is cached for the first results
@@ -97,12 +100,21 @@ class ModelSearchCommandTests(GAETestCase):
         cmd = ModelSearchCommand(SomeModel.query_index_ordered(), 3, cursor).execute()
         self.assertIsNone(cmd._ModelSearchCommand__future)
         self.assertIsNotNone(cmd._ModelSearchCommand__cached_keys)
-        self.assertListEqual(list(xrange(3, 6)), [some_model.index for some_model in cmd.result])
+        self._assert_result(cmd, 3, 6)
 
 
         #asserting results are not cached if len of results are less then search page_size
         ModelSearchCommand(SomeModel.query_index_ordered(), 3, cursor2).execute()
         self.assertIsNone(memcache.get(cursor2.urlsafe()))
+
+
+    def test_offset_search(self):
+        ndb.put_multi([SomeModel(index=i) for i in xrange(10)])
+        search = ModelSearchCommand(SomeModel.query_index_ordered(), 2, offset=1).execute()
+        self._assert_result(search, 1, 3)
+        # offset and cursor
+        search = ModelSearchCommand(SomeModel.query_index_ordered(), 2, search.cursor, offset=2).execute()
+        self._assert_result(search, 5, 7)
 
 
     def test_cursor_search(self):
@@ -113,16 +125,16 @@ class ModelSearchCommandTests(GAETestCase):
         self.assertTrue(search.more)
         cursor = search.cursor
         self.assertIsNotNone(cursor)
-        self.assertListEqual(list(xrange(3)), [some_model.index for some_model in search.result])
+        self._assert_result(search, 0, 3)
 
         search = ModelSearchCommand(SomeModel.query_index_ordered(), 3, cursor).execute()
         self.assertTrue(search.more)
         cursor2 = search.cursor
         self.assertIsNotNone(cursor2)
-        self.assertListEqual(list(xrange(3, 6)), [some_model.index for some_model in search.result])
+        self._assert_result(search, 3, 6)
 
         search = ModelSearchCommand(SomeModel.query_index_ordered(), 3, cursor2.urlsafe()).execute()
         cursor3 = search.cursor
         self.assertIsNotNone(cursor2)
-        self.assertListEqual(list(xrange(6, 8)), [some_model.index for some_model in search.result])
+        self._assert_result(search, 6, 8)
 
