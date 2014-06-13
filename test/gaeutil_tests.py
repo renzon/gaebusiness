@@ -6,7 +6,7 @@ from google.appengine.api import urlfetch, memcache
 from google.appengine.ext import ndb
 from gaebusiness import gaeutil
 from gaebusiness.gaeutil import UrlFetchCommand, TaskQueueCommand, ModelSearchCommand, SingleModelSearchCommand, \
-    SaveCommand
+    SaveCommand, UpdateCommand
 from mock import Mock
 from util import GAETestCase
 
@@ -111,7 +111,7 @@ class ModelSearchCommandTests(GAETestCase):
         cursor2 = cmd.execute().cursor
         self.assertIsNone(memcache.get(cmd._cache_key()))
 
-        #asserting items are cached
+        # asserting items are cached
         cmd = ModelSearchCommand(SomeModel.query_index_ordered(), 3, cursor, cache_begin=False).execute()
         cached_model_keys, cached_cursor = memcache.get(cmd._cache_key())
         cached_models = ndb.get_multi(cached_model_keys)
