@@ -6,7 +6,7 @@ from google.appengine.api import urlfetch, memcache
 from google.appengine.ext import ndb
 from gaebusiness import gaeutil
 from gaebusiness.gaeutil import UrlFetchCommand, TaskQueueCommand, ModelSearchCommand, SingleModelSearchCommand, \
-    SaveCommand, UpdateCommand
+    SaveCommand, UpdateCommand, FindOrCreateModelCommand
 from mock import Mock
 from util import GAETestCase
 
@@ -221,3 +221,16 @@ class UpdateCommandTests(GAETestCase):
         self.assert_update(ndb.Key(ModelStub,1))
 
 
+class FindOrCreateModelCommandTests(GAETestCase):
+    def test_success(self):
+        properties = {'name': 'b', 'age': 2}
+        cmd=FindOrCreateModelCommand(ModelStub.query(),ModelStub,properties)
+        result=cmd()
+        self.assertIsNotNone(result)
+        self.assertIsNotNone(result.key)
+        self.assertDictEqual(properties, result.to_dict())
+        properties2 = {'name': 'c', 'age': 3}
+        cmd=FindOrCreateModelCommand(ModelStub.query(),ModelStub,properties2)
+        result2=cmd()
+        self.assertEqual(result,result2)
+        self.assertDictEqual(properties, result2.to_dict())

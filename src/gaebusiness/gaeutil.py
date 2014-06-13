@@ -152,3 +152,17 @@ class UpdateCommand(Command):
         model.populate(**self.model_properties)
         self.result = model
         self._to_commit = model
+
+
+class FindOrCreateModelCommand(SingleModelSearchCommand):
+    def __init__(self, query, model_class, model_properties=None, start_cursor=None, offset=0, use_cache=True):
+        super(FindOrCreateModelCommand, self).__init__(query, start_cursor, offset, use_cache)
+        self.model_class = model_class
+        self.model_properties = model_properties or {}
+
+    def do_business(self, stop_on_error=True):
+        super(FindOrCreateModelCommand, self).do_business(stop_on_error)
+        if self.result is None:
+            model = self.model_class(**self.model_properties)
+            self.result = model
+            self._to_commit = model
