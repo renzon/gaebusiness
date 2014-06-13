@@ -119,3 +119,16 @@ class SingleModelSearchCommand(ModelSearchCommand):
         self.result = self.result[0] if self.result else None
         return self
 
+class SaveCommand(Command):
+    def __init__(self, modelClass,model_properties=None):
+        super(SaveCommand, self).__init__()
+        self.model_properties = model_properties or {}
+        self.modelClass = modelClass
+        self.__future=None
+
+    def set_up(self):
+        self.result=self.modelClass(**self.model_properties)
+        self.__future=self.result.put_async()
+
+    def do_business(self, stop_on_error=True):
+        self.__future.get_result()
