@@ -15,6 +15,7 @@ class Command(object):
         self.result = None
         for k, v in kwargs.iteritems():
             setattr(self, k, v)
+        self._to_commit = None
 
     def __add__(self, other):
         return CommandList([self, other])
@@ -39,7 +40,7 @@ class Command(object):
         '''
         Must return a Model, or a list of it to be commited on DB
         '''
-        return []
+        return self._to_commit
 
     def execute(self, stop_on_error=True):
         self.set_up()
