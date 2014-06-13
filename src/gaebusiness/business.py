@@ -33,7 +33,7 @@ class Command(object):
         '''
         Must do the main business of use case
         '''
-        raise NotImplementedError()
+        pass
 
     def commit(self):
         '''
