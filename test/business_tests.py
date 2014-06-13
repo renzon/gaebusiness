@@ -77,6 +77,20 @@ class BusinessTests(GAETestCase):
         self.assert_usecase_executed(mock_2, MOCK_2)
         self.assertDictEqual({}, errors)
 
+    def test_execute_call(self):
+        MOCK_1 = "mock 1"
+        MOCK_2 = "mock 2"
+        mock_1 = CommandMock(MOCK_1)
+        mock_2 = CommandMock(MOCK_2)
+        command_list = mock_1 + mock_2
+        result = command_list()
+        errors = command_list.errors
+        self.assert_usecase_executed(mock_1, MOCK_1)
+        self.assert_usecase_executed(mock_2, MOCK_2)
+        self.assertDictEqual({}, errors)
+        self.assertIsNotNone(result)
+        self.assertEqual(result, command_list.result)
+
     def test_explicit_main_command(self):
         MOCK_0 = "mock 0"
         MOCK_1 = "mock 1"

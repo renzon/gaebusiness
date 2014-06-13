@@ -47,6 +47,10 @@ class Command(object):
         ndb.put_multi(to_model_list(self.commit()))
         return self
 
+    def __call__(self, stop_on_error=True):
+        self.execute(stop_on_error)
+        return self.result
+
 
 class CommandList(Command):
     def __init__(self, commands, main_command=None, **kwargs):
