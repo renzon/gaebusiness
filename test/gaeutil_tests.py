@@ -106,7 +106,7 @@ class ModelSearchCommandTests(GAETestCase):
         cached_models = ndb.get_multi(cached_model_keys)
         self.assertListEqual(list(xrange(3)), [some_model.index for some_model in cached_models])
 
-        #asserting nothing is cached when using arg use_cache=False
+        # asserting nothing is cached when using arg use_cache=False
         cmd = ModelSearchCommand(SomeModel.query_index_ordered(), 3, cursor, use_cache=False)
         cursor2 = cmd.execute().cursor
         self.assertIsNone(memcache.get(cmd._cache_key()))
@@ -192,3 +192,23 @@ class SaveCommandTests(GAETestCase):
         self.assertIsNotNone(result)
         self.assertIsNotNone(result.key)
         self.assertEqual(10, result.index)
+
+
+class ModelStub(ndb.Model):
+    name = ndb.StringProperty()
+    age = ndb.IntegerProperty()
+
+
+class UpdateCommandTests(GAETestCase):
+    def test_update_with_numeric_id(self):
+        model = ModelStub(id=1, name='a', age=1)
+        model.put()
+        properties = {'name': 'b', 'age': 2}
+        cmd = UpdateCommand(ModelStub, 1, properties)
+        result = cmd()
+        model_on_db = model.key.get()
+        self.assertIsNotNone(result)
+        self.assertEqual(result, model_on_db)
+        self.assertDictEqual(properties, model_on_db.to_dict())
+
+

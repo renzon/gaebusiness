@@ -120,15 +120,31 @@ class SingleModelSearchCommand(ModelSearchCommand):
         return self
 
 class SaveCommand(Command):
-    def __init__(self, modelClass,model_properties=None):
+    def __init__(self, model_class,model_properties=None):
         super(SaveCommand, self).__init__()
         self.model_properties = model_properties or {}
-        self.modelClass = modelClass
+        self.model_class = model_class
         self.__future=None
 
     def set_up(self):
-        self.result=self.modelClass(**self.model_properties)
+        self.result=self.model_class(**self.model_properties)
         self.__future=self.result.put_async()
+
+    def do_business(self, stop_on_error=True):
+        self.__future.get_result()
+
+
+class UpdateCommand(Command):
+    def __init__(self, model_class,id_or_key,model_properties=None):
+        super(UpdateCommand, self).__init__()
+        self.key = id_or_key if isinstance(id_or_key,ndb.Key) else ndb.Key(model_class,int(id_or_key))
+        self.model_properties = model_properties or {}
+        self.model_class = model_class
+        self.__future=None
+
+
+    def set_up(self):
+        self.__future=self.key.get_async()
 
     def do_business(self, stop_on_error=True):
         self.__future.get_result()
