@@ -200,15 +200,24 @@ class ModelStub(ndb.Model):
 
 
 class UpdateCommandTests(GAETestCase):
-    def test_update_with_numeric_id(self):
+    def assert_update(self, id):
         model = ModelStub(id=1, name='a', age=1)
         model.put()
         properties = {'name': 'b', 'age': 2}
-        cmd = UpdateCommand(ModelStub, 1, properties)
+        cmd = UpdateCommand(ModelStub, id, properties)
         result = cmd()
         model_on_db = model.key.get()
         self.assertIsNotNone(result)
         self.assertEqual(result, model_on_db)
         self.assertDictEqual(properties, model_on_db.to_dict())
+
+    def test_update_with_numeric_id(self):
+        self.assert_update(1)
+
+    def test_update_with_string_id(self):
+            self.assert_update('1')
+
+    def test_update_with_key(self):
+        self.assert_update(ndb.Key(ModelStub,1))
 
 
