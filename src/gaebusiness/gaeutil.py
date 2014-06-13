@@ -110,3 +110,12 @@ class ModelSearchCommand(Command):
         return self.use_cache and (self.start_cursor or self.cache_begin)
 
 
+class SingleModelSearchCommand(ModelSearchCommand):
+    def __init__(self, query, start_cursor=None, offset=0, use_cache=True):
+        super(SingleModelSearchCommand, self).__init__(query, 1, start_cursor, offset, use_cache, use_cache)
+
+    def do_business(self, stop_on_error=True):
+        super(SingleModelSearchCommand, self).do_business(stop_on_error)
+        self.result = self.result[0] if self.result else None
+        return self
+

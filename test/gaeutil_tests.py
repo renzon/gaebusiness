@@ -5,7 +5,7 @@ import urllib
 from google.appengine.api import urlfetch, memcache
 from google.appengine.ext import ndb
 from gaebusiness import gaeutil
-from gaebusiness.gaeutil import UrlFetchCommand, TaskQueueCommand, ModelSearchCommand
+from gaebusiness.gaeutil import UrlFetchCommand, TaskQueueCommand, ModelSearchCommand, SingleModelSearchCommand
 from mock import Mock
 from util import GAETestCase
 
@@ -92,7 +92,7 @@ class ModelSearchCommandTests(GAETestCase):
 
     def test_cache(self):
         ndb.put_multi([SomeModel(index=i) for i in xrange(7)])
-        #asserting the first results are not cached
+        # asserting the first results are not cached
         cmd = ModelSearchCommand(SomeModel.query_index_ordered(), 3, cache_begin=False)
         self.assertIsNone(memcache.get(cmd._cache_key()))
 
@@ -148,7 +148,7 @@ class ModelSearchCommandTests(GAETestCase):
     def test_cursor_search(self):
         ndb.put_multi([SomeModel(index=i) for i in xrange(8)])
 
-        #Asserting cursor works
+        # Asserting cursor works
         search = ModelSearchCommand(SomeModel.query_index_ordered(), 3).execute()
         self.assertTrue(search.more)
         cursor = search.cursor
@@ -166,3 +166,19 @@ class ModelSearchCommandTests(GAETestCase):
         self.assertIsNotNone(cursor2)
         self._assert_result(search, 6, 8)
 
+
+class SingleModelSearchTests(GAETestCase):
+    def test_no_model_on_db(self):
+        cmd = SingleModelSearchCommand(SomeModel.query())
+        result = cmd()
+        self.assertIsNone(result)
+        self.assertIsNone(memcache.get(cmd._cache_key()))
+
+    def test_model_on_db(self):
+        model = SomeModel()
+        model.put()
+        cmd = SingleModelSearchCommand(SomeModel.query())
+        result = cmd()
+        # is a list because SingleModel inherits from ModelSearchCommand
+        self.assertListEqual([model.key], memcache.get(cmd._cache_key())[0])
+        self.assertEqual(model, result)
