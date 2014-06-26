@@ -3,6 +3,13 @@ from __future__ import absolute_import, unicode_literals
 from google.appengine.ext import ndb
 
 
+class CommandExecutionException(Exception):
+    """
+    Exception that indicates problems on execution
+    """
+    pass
+
+
 def to_model_list(models):
     if models is None:
         return []
@@ -18,7 +25,11 @@ class Command(object):
         self._to_commit = None
 
     def __add__(self, other):
-        return CommandList([self, other])
+        try:
+            other.insert(0, self)
+            return other
+        except AttributeError:
+            return CommandList([self, other])
 
     def add_error(self, key, msg):
         self.errors[key] = msg
@@ -59,6 +70,16 @@ class CommandList(Command):
         self.__commands = commands
         self.__main_command = main_command or self[-1]
 
+    def _insert(self, index, element):
+        self.__commands.insert(index, element)
+
+    def __add__(self, command):
+        if isinstance(command, Command):
+            self.__commands.append(command)
+        else:
+            self.__commands.extend(command.__commands)
+        self.__main_command = self[-1]
+        return self
 
     def __getitem__(self, index):
         return self.__commands[index]
@@ -74,9 +95,10 @@ class CommandList(Command):
             self.errors.update(cmd.errors)
             if stop_on_error and self.errors:
                 self.result = self.__main_command.result
-                return self.errors
+                raise CommandExecutionException(unicode(self.errors))
+        if self.errors:
+            raise CommandExecutionException(unicode(self.errors))
         self.result = self.__main_command.result
-        return self.errors
 
     def commit(self):
         to_commit = []

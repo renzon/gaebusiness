@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, unicode_literals
 from google.appengine.ext import ndb
-from gaebusiness.business import Command, CommandList
+from gaebusiness.business import Command, CommandList, CommandExecutionException
 from util import GAETestCase
 
 
@@ -43,6 +43,15 @@ class CommandMockWithErrorOnBusiness(CommandMock):
 
 
 class BusinessTests(GAETestCase):
+    def test__add__(self):
+        mock0 = CommandMock('')
+        mock1 = CommandMock('')
+        mock2 = CommandMock('')
+        cmdlist = mock0 + mock1 + mock2
+        self.assertIs(mock0, cmdlist[0])
+        self.assertIs(mock1, cmdlist[1])
+        self.assertIs(mock2, cmdlist[2])
+
     def test_execute_chaining(self):
         self.assertEqual('foo', CommandMock('foo').execute().result.ppt)
 
@@ -60,6 +69,12 @@ class BusinessTests(GAETestCase):
         self.assertTrue(usecase.set_up_executed)
         self.assertEqual(model_ppt, usecase.result.ppt, "do_business not executed")
         self.assertIsNotNone(usecase.result.key, "result should be saved on db")
+
+    def assert_usecase_only_commit_not_executed(self, usecase, model_ppt):
+        self.assertTrue(usecase.set_up_executed)
+        self.assertEqual(model_ppt, usecase.result.ppt, "do_business not executed")
+        self.assertIsNone(usecase.result.key, "result should not be saved on db")
+
 
     def assert_usecase_not_executed(self, usecase):
         self.assertTrue(usecase.set_up_executed)
@@ -146,31 +161,31 @@ class BusinessTests(GAETestCase):
         mock_2 = CommandMock(MOCK_2)
 
         command_list = mock_0 + mock_1 + mock_2
-        errors = command_list.execute(False).errors
+        self.assertRaises(CommandExecutionException, command_list.execute, False)
         self.assert_usecase_not_executed(mock_0)
         self.assert_usecase_not_executed(mock_1)
-        self.assert_usecase_executed(mock_2, MOCK_2)
-        self.assertDictEqual({ERROR_KEY: ERROR_MSG, ANOTHER_ERROR_KEY: ANOTHER_ERROR_MSG}, errors)
+        self.assert_usecase_only_commit_not_executed(mock_2, MOCK_2)
+        self.assertDictEqual({ERROR_KEY: ERROR_MSG, ANOTHER_ERROR_KEY: ANOTHER_ERROR_MSG}, command_list.errors)
 
     def test_execute_business_stopping_on_error(self):
         MOCK_1 = "mock 1"
         MOCK_2 = "mock 2"
         commands = [CommandMock(MOCK_1, True), CommandMock(MOCK_2)]
         command_list = CommandList(commands)
-        errors = command_list.execute(True).errors
+        self.assertRaises(CommandExecutionException, command_list.execute, True)
         self.assert_usecase_not_executed(commands[0])
         self.assert_usecase_not_executed(commands[1])
-        self.assertDictEqual({ERROR_KEY: ERROR_MSG}, errors)
+        self.assertDictEqual({ERROR_KEY: ERROR_MSG}, command_list.errors)
 
-    def test_execute_business_stopping_on_error_ocurred_on_business(self):
+    def test_execute_business_stopping_on_error_in_method_on_business(self):
         MOCK_0 = "mock 0"
         MOCK_1 = "mock 1"
         MOCK_2 = "mock 2"
         commands = [CommandMockWithErrorOnBusiness(MOCK_0), CommandMock(MOCK_1, True), CommandMock(MOCK_2)]
         command_list = CommandList(commands)
-        errors = command_list.execute(True).errors
+        self.assertRaises(CommandExecutionException, command_list.execute, True)
         for cmd in command_list:
             self.assert_usecase_not_executed(cmd)
-        self.assertDictEqual({ANOTHER_ERROR_KEY: ANOTHER_ERROR_MSG}, errors)
+        self.assertDictEqual({ANOTHER_ERROR_KEY: ANOTHER_ERROR_MSG}, command_list.errors)
 
 
