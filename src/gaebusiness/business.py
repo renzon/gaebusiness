@@ -55,6 +55,8 @@ class Command(object):
     def execute(self, stop_on_error=True):
         self.set_up()
         self.do_business(stop_on_error)
+        if self.errors and stop_on_error:
+            raise CommandExecutionException(unicode(self.errors))
         ndb.put_multi(to_model_list(self.commit()))
         return self
 

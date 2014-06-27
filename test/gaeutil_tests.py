@@ -4,9 +4,12 @@ import unittest
 import urllib
 from google.appengine.api import urlfetch, memcache
 from google.appengine.ext import ndb
+import webapp2
+from webapp2_extras import i18n
 from gaebusiness import gaeutil
+from gaebusiness.business import CommandExecutionException
 from gaebusiness.gaeutil import UrlFetchCommand, TaskQueueCommand, ModelSearchCommand, SingleModelSearchCommand, \
-    NaiveSaveCommand, UpdateCommand, FindOrCreateModelCommand
+    NaiveSaveCommand, UpdateCommand, FindOrCreateModelCommand, SaveCommand
 from gaeforms.ndb.form import ModelForm
 from mock import Mock
 from util import GAETestCase
@@ -119,21 +122,21 @@ class ModelSearchCommandTests(GAETestCase):
         self.assertListEqual(list(xrange(3, 6)), [some_model.index for some_model in cached_models])
         self.assertEqual(cursor2, cached_cursor)
 
-        #asserting cached with offset
+        # asserting cached with offset
         cmd = ModelSearchCommand(SomeModel.query_index_ordered(), 3, offset=3).execute()
         cached_model_keys, cached_cursor = memcache.get(cmd._cache_key())
         cached_models = ndb.get_multi(cached_model_keys)
         self.assertListEqual(list(xrange(3, 6)), [some_model.index for some_model in cached_models])
         self.assertEqual(cursor2, cached_cursor)
 
-        #asserting cached is used
+        # asserting cached is used
         cmd = ModelSearchCommand(SomeModel.query_index_ordered(), 3, cursor).execute()
         self.assertIsNone(cmd._ModelSearchCommand__future)
         self.assertIsNotNone(cmd._ModelSearchCommand__cached_keys)
         self._assert_result(cmd, 3, 6)
 
 
-        #asserting results are not cached if len of results are less then search page_size
+        # asserting results are not cached if len of results are less then search page_size
         ModelSearchCommand(SomeModel.query_index_ordered(), 3, cursor2).execute()
         self.assertIsNone(memcache.get(cursor2.urlsafe()))
 
@@ -200,7 +203,6 @@ class ModelStub(ndb.Model):
     age = ndb.IntegerProperty(required=True)
 
 
-
 class UpdateCommandTests(GAETestCase):
     def assert_update(self, id):
         model = ModelStub(id=1, name='a', age=1)
@@ -217,28 +219,83 @@ class UpdateCommandTests(GAETestCase):
         self.assert_update(1)
 
     def test_update_with_string_id(self):
-            self.assert_update('1')
+        self.assert_update('1')
 
     def test_update_with_key(self):
-        self.assert_update(ndb.Key(ModelStub,1))
+        self.assert_update(ndb.Key(ModelStub, 1))
 
 
 class FindOrCreateModelCommandTests(GAETestCase):
     def test_success(self):
         properties = {'name': 'b', 'age': 2}
-        cmd=FindOrCreateModelCommand(ModelStub.query(),ModelStub,properties)
-        result=cmd()
+        cmd = FindOrCreateModelCommand(ModelStub.query(), ModelStub, properties)
+        result = cmd()
         self.assertIsNotNone(result)
         self.assertIsNotNone(result.key)
         self.assertDictEqual(properties, result.to_dict())
         properties2 = {'name': 'c', 'age': 3}
-        cmd=FindOrCreateModelCommand(ModelStub.query(),ModelStub,properties2)
-        result2=cmd()
-        self.assertEqual(result,result2)
+        cmd = FindOrCreateModelCommand(ModelStub.query(), ModelStub, properties2)
+        result2 = cmd()
+        self.assertEqual(result, result2)
         self.assertDictEqual(properties, result2.to_dict())
+
 
 class ModelStubForm(ModelForm):
     _model_class = ModelStub
+
+
+class SaveModelStubCommand(SaveCommand):
+    _model_form_class = ModelStubForm
+
+# workaround for test using internationalization
+app = webapp2.WSGIApplication(
+    [webapp2.Route('/', None, name='upload_handler')])
+
+request = webapp2.Request({'SERVER_NAME': 'test', 'SERVER_PORT': 80,
+                           'wsgi.url_scheme': 'http'})
+request.app = app
+app.set_globals(app=app, request=request)
+
+i18n.default_config['default_timezone'] = 'America/Sao_Paulo'
+# end of workaround
+
+
+class SaveCommandTests(GAETestCase):
+    def test_init(self):
+        self.assertRaises(Exception, SaveCommand, 'should raise a error because a _model_form_class should be provided')
+
+    def _assert_validation_errors(self, cmd, expected_error_keys):
+        self.assertRaises(CommandExecutionException, cmd)
+        self.assertIsNone(cmd.result)
+        self.assertSetEqual(expected_error_keys, set(cmd.errors.iterkeys()))
+
+    def test_validation(self):
+        expected_error_keys = set('name,age'.split(','))
+        cmd = SaveModelStubCommand()
+        self._assert_validation_errors(cmd, expected_error_keys)
+
+        expected_error_keys = set(['name'])
+        cmd = SaveModelStubCommand(age='31')
+        self._assert_validation_errors(cmd, expected_error_keys)
+
+        expected_error_keys = set(['age'])
+        cmd = SaveModelStubCommand(age='not a number', name='foo')
+        self._assert_validation_errors(cmd, expected_error_keys)
+
+        expected_error_keys = set(['age'])
+        cmd = SaveModelStubCommand(name='foo')
+        self._assert_validation_errors(cmd, expected_error_keys)
+
+    def test_success(self):
+        cmd = SaveModelStubCommand(name='foo', age='31')
+        result = cmd()
+        self.assertIsNotNone(result)
+        self.assertIsNotNone(result.key)
+        model_on_db = result.key.get()
+        self.assertEqual('foo', model_on_db.name)
+        self.assertEqual(31, model_on_db.age)
+
+
 
 
 

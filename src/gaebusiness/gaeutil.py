@@ -167,6 +167,18 @@ class FindOrCreateModelCommand(SingleModelSearchCommand):
             self.result = model
             self._to_commit = model
 
+
 class SaveCommand(Command):
-    def __init__(self, ):
+    _model_form_class = None
+
+    def __init__(self, **form_parameters):
+        if self._model_form_class is None:
+            raise Exception('Must define _model_form_class, the class inheriting from ModelForm')
         super(SaveCommand, self).__init__()
+        self.form = self._model_form_class(**form_parameters)
+
+    def do_business(self, stop_on_error=True):
+        self.errors.update(self.form.validate())
+        if not self.errors:
+            self.result = self.form.populate_model()
+            self._to_commit = self.result
