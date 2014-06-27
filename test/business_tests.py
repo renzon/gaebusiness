@@ -55,15 +55,9 @@ class BusinessTests(GAETestCase):
     def test_execute_chaining(self):
         self.assertEqual('foo', CommandMock('foo').execute().result.ppt)
 
-    def testCommandInit(self):
-        cmd = Command(a=1, b=2)
-        self.assertEqual(1, cmd.a)
-        self.assertEqual(2, cmd.b)
 
-    def testCommandListInit(self):
-        cmd = CommandList([CommandMock('foo')], c=1, d=2)
-        self.assertEqual(1, cmd.c)
-        self.assertEqual(2, cmd.d)
+
+
 
     def assert_usecase_executed(self, usecase, model_ppt):
         self.assertTrue(usecase.set_up_executed)
@@ -187,5 +181,6 @@ class BusinessTests(GAETestCase):
         for cmd in command_list:
             self.assert_usecase_not_executed(cmd)
         self.assertDictEqual({ANOTHER_ERROR_KEY: ANOTHER_ERROR_MSG}, command_list.errors)
+
 
 

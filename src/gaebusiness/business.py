@@ -17,12 +17,11 @@ def to_model_list(models):
 
 
 class Command(object):
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.errors = {}
         self.result = None
-        for k, v in kwargs.iteritems():
-            setattr(self, k, v)
         self._to_commit = None
+
 
     def __add__(self, other):
         try:
@@ -65,8 +64,8 @@ class Command(object):
 
 
 class CommandList(Command):
-    def __init__(self, commands, main_command=None, **kwargs):
-        super(CommandList, self).__init__(**kwargs)
+    def __init__(self, commands, main_command=None):
+        super(CommandList, self).__init__()
         self.__commands = commands
         self.__main_command = main_command or self[-1]
 

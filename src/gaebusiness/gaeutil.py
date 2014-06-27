@@ -12,7 +12,7 @@ from gaebusiness.business import Command
 class UrlFetchCommand(Command):
     def __init__(self, url, params={}, method=urlfetch.GET, headers={}, validate_certificate=True, deadline=30,
                  **kwargs):
-        super(UrlFetchCommand, self).__init__(**kwargs)
+        super(UrlFetchCommand, self).__init__()
         self.method = method
         self.headers = headers
         self.validate_certificate = validate_certificate
@@ -120,9 +120,9 @@ class SingleModelSearchCommand(ModelSearchCommand):
         return self
 
 
-class SaveCommand(Command):
+class NaiveSaveCommand(Command):
     def __init__(self, model_class, model_properties=None):
-        super(SaveCommand, self).__init__()
+        super(NaiveSaveCommand, self).__init__()
         self.model_properties = model_properties or {}
         self.model_class = model_class
         self.__future = None
@@ -166,3 +166,7 @@ class FindOrCreateModelCommand(SingleModelSearchCommand):
             model = self.model_class(**self.model_properties)
             self.result = model
             self._to_commit = model
+
+class SaveCommand(Command):
+    def __init__(self, ):
+        super(SaveCommand, self).__init__()

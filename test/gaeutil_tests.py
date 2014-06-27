@@ -6,7 +6,8 @@ from google.appengine.api import urlfetch, memcache
 from google.appengine.ext import ndb
 from gaebusiness import gaeutil
 from gaebusiness.gaeutil import UrlFetchCommand, TaskQueueCommand, ModelSearchCommand, SingleModelSearchCommand, \
-    SaveCommand, UpdateCommand, FindOrCreateModelCommand
+    NaiveSaveCommand, UpdateCommand, FindOrCreateModelCommand
+from gaeforms.ndb.form import ModelForm
 from mock import Mock
 from util import GAETestCase
 
@@ -185,9 +186,9 @@ class SingleModelSearchTests(GAETestCase):
         self.assertEqual(model, result)
 
 
-class SaveCommandTests(GAETestCase):
+class NaiveSaveCommandTests(GAETestCase):
     def test_save(self):
-        cmd = SaveCommand(SomeModel, {'index': 10})
+        cmd = NaiveSaveCommand(SomeModel, {'index': 10})
         result = cmd()
         self.assertIsNotNone(result)
         self.assertIsNotNone(result.key)
@@ -195,8 +196,9 @@ class SaveCommandTests(GAETestCase):
 
 
 class ModelStub(ndb.Model):
-    name = ndb.StringProperty()
-    age = ndb.IntegerProperty()
+    name = ndb.StringProperty(required=True)
+    age = ndb.IntegerProperty(required=True)
+
 
 
 class UpdateCommandTests(GAETestCase):
@@ -234,3 +236,10 @@ class FindOrCreateModelCommandTests(GAETestCase):
         result2=cmd()
         self.assertEqual(result,result2)
         self.assertDictEqual(properties, result2.to_dict())
+
+class ModelStubForm(ModelForm):
+    _model_class = ModelStub
+
+
+
+
