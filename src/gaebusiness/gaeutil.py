@@ -154,14 +154,14 @@ class NaiveUpdateCommand(Command):
         self._to_commit = model
 
 
-class FindOrCreateModelCommand(SingleModelSearchCommand):
+class NaiveFindOrCreateModelCommand(SingleModelSearchCommand):
     def __init__(self, query, model_class, model_properties=None, start_cursor=None, offset=0, use_cache=True):
-        super(FindOrCreateModelCommand, self).__init__(query, start_cursor, offset, use_cache)
+        super(NaiveFindOrCreateModelCommand, self).__init__(query, start_cursor, offset, use_cache)
         self.model_class = model_class
         self.model_properties = model_properties or {}
 
     def do_business(self, stop_on_error=True):
-        super(FindOrCreateModelCommand, self).do_business(stop_on_error)
+        super(NaiveFindOrCreateModelCommand, self).do_business(stop_on_error)
         if self.result is None:
             model = self.model_class(**self.model_properties)
             self.result = model
@@ -207,8 +207,21 @@ class UpdateCommand(SaveCommand):
             self._to_commit = model
 
 
+class FindOrCreateCommand(SingleModelSearchCommand):
+    _model_form_class = None
 
+    def __init__(self, query, **form_paramenters):
+        if self._model_form_class is None:
+            raise Exception('Must define _model_form_class, the class inheriting from ModelForm')
+        super(FindOrCreateCommand, self).__init__(query)
+        self.form = self._model_form_class(**form_paramenters)
 
-
+    def do_business(self, stop_on_error=True):
+        super(FindOrCreateCommand, self).do_business(stop_on_error)
+        if self.result is None:
+            self.errors.update(self.form.validate())
+            if not self.errors:
+                self.result = self.form.populate_model()
+                self._to_commit = self.result
 
 

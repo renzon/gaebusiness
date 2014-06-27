@@ -9,7 +9,7 @@ from webapp2_extras import i18n
 from gaebusiness import gaeutil
 from gaebusiness.business import CommandExecutionException
 from gaebusiness.gaeutil import UrlFetchCommand, TaskQueueCommand, ModelSearchCommand, SingleModelSearchCommand, \
-    NaiveSaveCommand, NaiveUpdateCommand, FindOrCreateModelCommand, SaveCommand, UpdateCommand
+    NaiveSaveCommand, NaiveUpdateCommand, NaiveFindOrCreateModelCommand, SaveCommand, UpdateCommand, FindOrCreateCommand
 from gaeforms.ndb.form import ModelForm
 from mock import Mock
 from util import GAETestCase
@@ -225,16 +225,16 @@ class NaiveUpdateCommandTests(GAETestCase):
         self.assert_update(ndb.Key(ModelStub, 1))
 
 
-class FindOrCreateModelCommandTests(GAETestCase):
+class NaiveFindOrCreateModelCommandTests(GAETestCase):
     def test_success(self):
         properties = {'name': 'b', 'age': 2}
-        cmd = FindOrCreateModelCommand(ModelStub.query(), ModelStub, properties)
+        cmd = NaiveFindOrCreateModelCommand(ModelStub.query(), ModelStub, properties)
         result = cmd()
         self.assertIsNotNone(result)
         self.assertIsNotNone(result.key)
         self.assertDictEqual(properties, result.to_dict())
         properties2 = {'name': 'c', 'age': 3}
-        cmd = FindOrCreateModelCommand(ModelStub.query(), ModelStub, properties2)
+        cmd = NaiveFindOrCreateModelCommand(ModelStub.query(), ModelStub, properties2)
         result2 = cmd()
         self.assertEqual(result, result2)
         self.assertDictEqual(properties, result2.to_dict())
@@ -340,7 +340,47 @@ class UpdateCommandTests(GAETestCase):
         self.assertEqual(31, model_on_db.age)
 
 
+class FindOrCreateModelStubCommand(FindOrCreateCommand):
+    _model_form_class = ModelStubForm
 
 
+class FindOrCreateModelCommandTests(GAETestCase):
+    def test_success(self):
+        old_properties = {'name': 'b', 'age': '2'}
+        old_model_properties = {'name': 'b', 'age': 2}
+        query = ModelStub.query()
+        cmd = FindOrCreateModelStubCommand(query, **old_properties)
+        result = cmd()
+        self.assertIsNotNone(result)
+        self.assertIsNotNone(result.key)
+        self.assertDictEqual(old_model_properties, result.to_dict())
+        new_properties = {'name': 'c', 'age': '3'}
+        cmd = FindOrCreateModelStubCommand(query, **new_properties)
+        result2 = cmd()
+        self.assertEqual(result, result2)
+        self.assertDictEqual(old_model_properties, result2.to_dict())
+
+    def _assert_validation_errors(self, cmd, expected_error_keys):
+        self.assertRaises(CommandExecutionException, cmd)
+        self.assertIsNone(cmd.result)
+        self.assertSetEqual(expected_error_keys, set(cmd.errors.iterkeys()))
+
+    def test_validation(self):
+        query = ModelStub.query()
+        expected_error_keys = set('name,age'.split(','))
+        cmd = FindOrCreateModelStubCommand(query)
+        self._assert_validation_errors(cmd, expected_error_keys)
+
+        expected_error_keys = set(['name'])
+        cmd = FindOrCreateModelStubCommand(query, age='31')
+        self._assert_validation_errors(cmd, expected_error_keys)
+
+        expected_error_keys = set(['age'])
+        cmd = FindOrCreateModelStubCommand(query, age='not a number', name='foo')
+        self._assert_validation_errors(cmd, expected_error_keys)
+
+        expected_error_keys = set(['age'])
+        cmd = FindOrCreateModelStubCommand(ModelStub.query(),name='foo')
+        self._assert_validation_errors(cmd, expected_error_keys)
 
 
