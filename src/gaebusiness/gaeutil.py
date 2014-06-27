@@ -225,3 +225,14 @@ class FindOrCreateCommand(SingleModelSearchCommand):
                 self._to_commit = self.result
 
 
+class DeleteCommand(Command):
+    def __init__(self, *model_keys):
+        super(DeleteCommand, self).__init__()
+        self.model_keys = model_keys
+        self._futures = None
+
+    def set_up(self):
+        self._futures = ndb.delete_multi_async(self.model_keys)
+
+    def do_business(self, stop_on_error=True):
+        [f.get_result() for f in self._futures]

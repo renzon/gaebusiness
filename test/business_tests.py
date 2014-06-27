@@ -2,6 +2,9 @@
 from __future__ import absolute_import, unicode_literals
 from google.appengine.ext import ndb
 from gaebusiness.business import Command, CommandList, CommandExecutionException
+from gaebusiness.gaeutil import DeleteCommand
+from gaeutil_tests import ModelStub
+from mommygae import mommy
 from util import GAETestCase
 
 
@@ -54,9 +57,6 @@ class BusinessTests(GAETestCase):
 
     def test_execute_chaining(self):
         self.assertEqual('foo', CommandMock('foo').execute().result.ppt)
-
-
-
 
 
     def assert_usecase_executed(self, usecase, model_ppt):
@@ -183,4 +183,15 @@ class BusinessTests(GAETestCase):
         self.assertDictEqual({ANOTHER_ERROR_KEY: ANOTHER_ERROR_MSG}, command_list.errors)
 
 
+class DeleteCommnadTests(GAETestCase):
+    def test_delete(self):
+        model = mommy.save_one(ModelStub)
+        self.assertIsNotNone(model.key.get())
+        DeleteCommand(model.key).execute()
+        self.assertIsNone(model.key.get())
 
+        models = [mommy.save_one(ModelStub) for i in range(3)]
+        model_keys = [m.key for m in models]
+        self.assertListEqual(models, ndb.get_multi(model_keys))
+        DeleteCommand(*model_keys).execute()
+        self.assertListEqual([None, None, None], ndb.get_multi(model_keys))
