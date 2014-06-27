@@ -135,9 +135,9 @@ class NaiveSaveCommand(Command):
         self.__future.get_result()
 
 
-class UpdateCommand(Command):
+class NaiveUpdateCommand(Command):
     def __init__(self, model_class, id_or_key, model_properties=None):
-        super(UpdateCommand, self).__init__()
+        super(NaiveUpdateCommand, self).__init__()
         self.key = id_or_key if isinstance(id_or_key, ndb.Key) else ndb.Key(model_class, int(id_or_key))
         self.model_properties = model_properties or {}
         self.model_class = model_class
@@ -182,3 +182,33 @@ class SaveCommand(Command):
         if not self.errors:
             self.result = self.form.populate_model()
             self._to_commit = self.result
+
+
+class UpdateCommand(SaveCommand):
+    def __init__(self, model_key, **form_parameters):
+        super(UpdateCommand, self).__init__(**form_parameters)
+        self.model_key = model_key
+        self._model_future = None
+        self.old_model_properties = None
+
+    def set_up(self):
+        super(UpdateCommand, self).set_up()
+        self._model_future = self.model_key.get_async()
+
+    def do_business(self, stop_on_error=True):
+        self.errors.update(self.form.validate())
+        model = self._model_future.get_result()
+        if model is None:
+            self.add_error('model', 'Model with key %s does not exist' % self.model_key)
+        if not self.errors:
+            self.old_model_properties = model.to_dict()
+            self.result = model
+            self.form.populate_model(model)
+            self._to_commit = model
+
+
+
+
+
+
+

@@ -9,7 +9,7 @@ from webapp2_extras import i18n
 from gaebusiness import gaeutil
 from gaebusiness.business import CommandExecutionException
 from gaebusiness.gaeutil import UrlFetchCommand, TaskQueueCommand, ModelSearchCommand, SingleModelSearchCommand, \
-    NaiveSaveCommand, UpdateCommand, FindOrCreateModelCommand, SaveCommand
+    NaiveSaveCommand, NaiveUpdateCommand, FindOrCreateModelCommand, SaveCommand, UpdateCommand
 from gaeforms.ndb.form import ModelForm
 from mock import Mock
 from util import GAETestCase
@@ -203,12 +203,12 @@ class ModelStub(ndb.Model):
     age = ndb.IntegerProperty(required=True)
 
 
-class UpdateCommandTests(GAETestCase):
+class NaiveUpdateCommandTests(GAETestCase):
     def assert_update(self, id):
         model = ModelStub(id=1, name='a', age=1)
         model.put()
         properties = {'name': 'b', 'age': 2}
-        cmd = UpdateCommand(ModelStub, id, properties)
+        cmd = NaiveUpdateCommand(ModelStub, id, properties)
         result = cmd()
         model_on_db = model.key.get()
         self.assertIsNotNone(result)
@@ -262,7 +262,7 @@ i18n.default_config['default_timezone'] = 'America/Sao_Paulo'
 
 class SaveCommandTests(GAETestCase):
     def test_init(self):
-        self.assertRaises(Exception, SaveCommand, 'should raise a error because a _model_form_class should be provided')
+        self.assertRaises(Exception, SaveCommand)
 
     def _assert_validation_errors(self, cmd, expected_error_keys):
         self.assertRaises(CommandExecutionException, cmd)
@@ -291,6 +291,50 @@ class SaveCommandTests(GAETestCase):
         result = cmd()
         self.assertIsNotNone(result)
         self.assertIsNotNone(result.key)
+        model_on_db = result.key.get()
+        self.assertEqual('foo', model_on_db.name)
+        self.assertEqual(31, model_on_db.age)
+
+
+class UpdateModelStubCommand(UpdateCommand):
+    _model_form_class = ModelStubForm
+
+
+class UpdateCommandTests(GAETestCase):
+    def test_init(self):
+        self.assertRaises(Exception, UpdateCommand, 1)
+
+    def _assert_validation_errors(self, cmd, expected_error_keys):
+        self.assertRaises(CommandExecutionException, cmd)
+        self.assertIsNone(cmd.result)
+        self.assertSetEqual(expected_error_keys, set(cmd.errors.iterkeys()))
+
+    def test_validation(self):
+        expected_error_keys = set('model,name,age'.split(','))
+        model_key = ndb.Key(ModelStub, 1)
+        cmd = UpdateModelStubCommand(model_key)
+        self._assert_validation_errors(cmd, expected_error_keys)
+
+        expected_error_keys = set('model,name'.split(','))
+        cmd = UpdateModelStubCommand(model_key, age='31')
+        self._assert_validation_errors(cmd, expected_error_keys)
+
+        expected_error_keys = set('model,age'.split(','))
+        cmd = UpdateModelStubCommand(model_key, age='not a number', name='foo')
+        self._assert_validation_errors(cmd, expected_error_keys)
+
+        expected_error_keys = set('model,age'.split(','))
+        cmd = UpdateModelStubCommand(model_key, name='foo')
+        self._assert_validation_errors(cmd, expected_error_keys)
+
+    def test_success(self):
+        old_properties = {'name': 'old_foo', 'age': 26}
+        model_key = ModelStub(**old_properties).put()
+        cmd = UpdateModelStubCommand(model_key, name='foo', age='31')
+        result = cmd()
+        self.assertIsNotNone(result)
+        self.assertEqual(model_key, result.key)
+        self.assertDictEqual(old_properties, cmd.old_model_properties)
         model_on_db = result.key.get()
         self.assertEqual('foo', model_on_db.name)
         self.assertEqual(31, model_on_db.age)
