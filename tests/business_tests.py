@@ -52,6 +52,16 @@ class CommandTests(GAETestCase):
         self.assertRaises(CommandExecutionException, cmd, False)
         self.assertIsNone(cmd.commit())
 
+    def test_update_errors(self):
+        cmd=Command()
+        self.assertDictEqual({},cmd.errors)
+        errors={'foo':'foomsg'}
+        cmd.update_errors(**errors)
+        self.assertDictEqual(errors,cmd.errors)
+        errors['bar']='barmsg'
+        cmd.update_errors(**errors)
+        self.assertDictEqual(errors,cmd.errors)
+
 
 class CommandParallelTests(GAETestCase):
     def test_execute_chaining(self):

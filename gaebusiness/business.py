@@ -22,6 +22,9 @@ class Command(object):
         self.result = None
         self._to_commit = None
 
+    def update_error(self,**errors):
+        return self.errors.update(errors)
+
 
     def add_error(self, key, msg):
         self.errors[key] = msg
