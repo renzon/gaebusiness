@@ -28,7 +28,7 @@ class Command(object):
             other.insert(0, self)
             return other
         except AttributeError:
-            return CommandList([self, other])
+            return CommandParallel([self, other])
 
     def add_error(self, key, msg):
         self.errors[key] = msg
@@ -65,9 +65,9 @@ class Command(object):
         return self.result
 
 
-class CommandList(Command):
+class CommandParallel(Command):
     def __init__(self, *commands):
-        super(CommandList, self).__init__()
+        super(CommandParallel, self).__init__()
         self.__commands = list(commands)
 
     def _insert(self, index, element):
@@ -103,7 +103,7 @@ class CommandList(Command):
             pass
 
     def commit(self):
-        models = to_model_list(super(CommandList, self).commit())
+        models = to_model_list(super(CommandParallel, self).commit())
         for cmd in self:
             models.extend(to_model_list(cmd.commit()))
         return models

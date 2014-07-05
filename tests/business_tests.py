@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, unicode_literals
 from google.appengine.ext import ndb
-from gaebusiness.business import Command, CommandList, CommandExecutionException
+from gaebusiness.business import Command, CommandParallel, CommandExecutionException
 from gaebusiness.gaeutil import DeleteCommand
 from gaeutil_tests import ModelStub
 from mommygae import mommy
@@ -45,12 +45,12 @@ class CommandMockWithErrorOnBusiness(CommandMock):
         self.add_error(ANOTHER_ERROR_KEY, ANOTHER_ERROR_MSG)
 
 
-class BusinessTests(GAETestCase):
+class CommandParallelTests(GAETestCase):
     def test__add__(self):
         mock0 = CommandMock('')
         mock1 = CommandMock('')
         mock2 = CommandMock('')
-        cmdlist = CommandList(mock0, mock1, mock2)
+        cmdlist = CommandParallel(mock0, mock1, mock2)
         self.assertIs(mock0, cmdlist[0])
         self.assertIs(mock1, cmdlist[1])
         self.assertIs(mock2, cmdlist[2])
@@ -80,7 +80,7 @@ class BusinessTests(GAETestCase):
         MOCK_2 = "mock 2"
         mock_1 = CommandMock(MOCK_1)
         mock_2 = CommandMock(MOCK_2)
-        command_list = CommandList(mock_1, mock_2)
+        command_list = CommandParallel(mock_1, mock_2)
         errors = command_list.execute().errors
         self.assert_usecase_executed(mock_1, MOCK_1)
         self.assert_usecase_executed(mock_2, MOCK_2)
@@ -91,7 +91,7 @@ class BusinessTests(GAETestCase):
         MOCK_2 = "mock 2"
         mock_1 = CommandMock(MOCK_1)
         mock_2 = CommandMock(MOCK_2)
-        command_list = CommandList(mock_1, mock_2)
+        command_list = CommandParallel(mock_1, mock_2)
         result = command_list()
         errors = command_list.errors
         self.assert_usecase_executed(mock_1, MOCK_1)
@@ -105,11 +105,11 @@ class BusinessTests(GAETestCase):
         MOCK_0 = "mock 0"
         MOCK_1 = "mock 1"
 
-        class CommandListComposition(CommandList):
+        class CommandParallelComposition(CommandParallel):
             def __init__(self, label, label_1):
-                CommandList.__init__(self, CommandMock(label), CommandMock(label_1))
+                CommandParallel.__init__(self, CommandMock(label), CommandMock(label_1))
 
-        command_list = CommandListComposition(MOCK_0, MOCK_1)
+        command_list = CommandParallelComposition(MOCK_0, MOCK_1)
         errors = command_list.execute().errors
         self.assert_usecase_executed(command_list[0], MOCK_0)
         self.assert_usecase_executed(command_list[1], MOCK_1)
@@ -120,11 +120,11 @@ class BusinessTests(GAETestCase):
         MOCK_0 = "mock 0"
         MOCK_1 = "mock 1"
 
-        class CommandListComposition(CommandList):
+        class CommandParallelComposition(CommandParallel):
             def __init__(self, label, label_1):
-                CommandList.__init__(self, CommandMock(label), CommandMock(label_1))
+                CommandParallel.__init__(self, CommandMock(label), CommandMock(label_1))
 
-        command_list = CommandListComposition(MOCK_0, MOCK_1)
+        command_list = CommandParallelComposition(MOCK_0, MOCK_1)
         errors = command_list.execute().errors
         self.assert_usecase_executed(command_list[0], MOCK_0)
         self.assert_usecase_executed(command_list[1], MOCK_1)
@@ -139,7 +139,7 @@ class BusinessTests(GAETestCase):
         mock_1 = CommandMock(MOCK_1, True)
         mock_2 = CommandMock(MOCK_2)
 
-        command_list = CommandList(mock_0 , mock_1 , mock_2)
+        command_list = CommandParallel(mock_0, mock_1, mock_2)
         self.assertRaises(CommandExecutionException, command_list.execute, False)
         self.assert_usecase_not_executed(mock_0)
         self.assert_usecase_not_executed(mock_1)
@@ -149,7 +149,7 @@ class BusinessTests(GAETestCase):
     def test_execute_business_stopping_on_error(self):
         MOCK_1 = "mock 1"
         MOCK_2 = "mock 2"
-        command_list = CommandList(CommandMock(MOCK_1, True), CommandMock(MOCK_2))
+        command_list = CommandParallel(CommandMock(MOCK_1, True), CommandMock(MOCK_2))
         self.assertRaises(CommandExecutionException, command_list.execute, True)
         self.assert_usecase_not_executed(command_list[0])
         self.assert_usecase_not_executed(command_list[1])
@@ -159,7 +159,7 @@ class BusinessTests(GAETestCase):
         MOCK_0 = "mock 0"
         MOCK_1 = "mock 1"
         MOCK_2 = "mock 2"
-        command_list = CommandList(CommandMockWithErrorOnBusiness(MOCK_0), CommandMock(MOCK_1, True),
+        command_list = CommandParallel(CommandMockWithErrorOnBusiness(MOCK_0), CommandMock(MOCK_1, True),
                                    CommandMock(MOCK_2))
         self.assertRaises(CommandExecutionException, command_list.execute, True)
         for cmd in command_list:
@@ -168,12 +168,12 @@ class BusinessTests(GAETestCase):
 
 
     def test_commit(self):
-        class CommadListMock(CommandList):
+        class CommadParallelMock(CommandParallel):
             def __init__(self, ):
-                super(CommadListMock, self).__init__(Command())
+                super(CommadParallelMock, self).__init__(Command())
                 self._to_commit = ModelMock()
 
-        cmd = CommadListMock()
+        cmd = CommadParallelMock()
         cmd()
         self.assertIsNotNone(ModelMock.query().get())
 
