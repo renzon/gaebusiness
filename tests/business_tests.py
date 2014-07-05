@@ -2,7 +2,7 @@
 from __future__ import absolute_import, unicode_literals
 from itertools import izip
 from google.appengine.ext import ndb
-from gaebusiness.business import Command, CommandParallel, CommandExecutionException
+from gaebusiness.business import Command, CommandParallel, CommandExecutionException, CommandSequential
 from gaebusiness.gaeutil import DeleteCommand
 from gaeutil_tests import ModelStub
 from mommygae import mommy
@@ -121,37 +121,8 @@ class CommandParallelTests(CommandListTest):
         self.assert_command_executed(mock_2, MOCK_2)
         self.assertDictEqual({}, errors)
         self.assertIsNotNone(result)
+        self.assertEqual(mock_2.result, command_list.result, 'result must be equals to last command result')
         self.assertEqual(result, command_list.result)
-
-
-    def test_implicit_return_last_command_result(self):
-        MOCK_0 = "mock 0"
-        MOCK_1 = "mock 1"
-
-        class CommandParallelComposition(CommandParallel):
-            def __init__(self, label, label_1):
-                CommandParallel.__init__(self, CommandMock(label), CommandMock(label_1))
-
-        command_list = CommandParallelComposition(MOCK_0, MOCK_1)
-        errors = command_list.execute().errors
-        self.assert_command_executed(command_list[0], MOCK_0)
-        self.assert_command_executed(command_list[1], MOCK_1)
-        self.assertEqual(MOCK_1, command_list.result.ppt)  # it takes the last command as de default main command
-        self.assertDictEqual({}, errors)
-
-    def test_business_composition(self):
-        MOCK_0 = "mock 0"
-        MOCK_1 = "mock 1"
-
-        class CommandParallelComposition(CommandParallel):
-            def __init__(self, label, label_1):
-                CommandParallel.__init__(self, CommandMock(label), CommandMock(label_1))
-
-        command_list = CommandParallelComposition(MOCK_0, MOCK_1)
-        errors = command_list.execute().errors
-        self.assert_command_executed(command_list[0], MOCK_0)
-        self.assert_command_executed(command_list[1], MOCK_1)
-        self.assertDictEqual({}, errors)
 
 
     def test_execute_business_not_stopping_on_error(self):
@@ -208,7 +179,7 @@ class CommandSequentialTests(CommandListTest):
         MOCK_2 = "mock 2"
         mock_1 = CommandMock(MOCK_1)
         mock_2 = CommandMock(MOCK_2)
-        command_list = CommandParallel(mock_1, mock_2)
+        command_list = CommandSequential(mock_1, mock_2)
         errors = command_list.execute().errors
         self.assert_command_executed(mock_1, MOCK_1)
         self.assert_command_executed(mock_2, MOCK_2)
@@ -219,44 +190,15 @@ class CommandSequentialTests(CommandListTest):
         MOCK_2 = "mock 2"
         mock_1 = CommandMock(MOCK_1)
         mock_2 = CommandMock(MOCK_2)
-        command_list = CommandParallel(mock_1, mock_2)
+        command_list = CommandSequential(mock_1, mock_2)
         result = command_list()
         errors = command_list.errors
         self.assert_command_executed(mock_1, MOCK_1)
         self.assert_command_executed(mock_2, MOCK_2)
         self.assertDictEqual({}, errors)
         self.assertIsNotNone(result)
+        self.assertEqual(mock_2.result, command_list.result, 'result must be equals to last command result')
         self.assertEqual(result, command_list.result)
-
-
-    def test_implicit_return_last_command_result(self):
-        MOCK_0 = "mock 0"
-        MOCK_1 = "mock 1"
-
-        class CommandParallelComposition(CommandParallel):
-            def __init__(self, label, label_1):
-                CommandParallel.__init__(self, CommandMock(label), CommandMock(label_1))
-
-        command_list = CommandParallelComposition(MOCK_0, MOCK_1)
-        errors = command_list.execute().errors
-        self.assert_command_executed(command_list[0], MOCK_0)
-        self.assert_command_executed(command_list[1], MOCK_1)
-        self.assertEqual(MOCK_1, command_list.result.ppt)  # it takes the last command as de default main command
-        self.assertDictEqual({}, errors)
-
-    def test_business_composition(self):
-        MOCK_0 = "mock 0"
-        MOCK_1 = "mock 1"
-
-        class CommandParallelComposition(CommandParallel):
-            def __init__(self, label, label_1):
-                CommandParallel.__init__(self, CommandMock(label), CommandMock(label_1))
-
-        command_list = CommandParallelComposition(MOCK_0, MOCK_1)
-        errors = command_list.execute().errors
-        self.assert_command_executed(command_list[0], MOCK_0)
-        self.assert_command_executed(command_list[1], MOCK_1)
-        self.assertDictEqual({}, errors)
 
 
     def test_execute_business_not_stopping_on_error(self):
@@ -267,42 +209,43 @@ class CommandSequentialTests(CommandListTest):
         mock_1 = CommandMock(MOCK_1, ERROR_KEY, ERROR_MSG)
         mock_2 = CommandMock(MOCK_2)
 
-        command_list = CommandParallel(mock_0, mock_1, mock_2)
-        self.assertRaises(CommandExecutionException, command_list.execute, False)
-        self.assert_command_only_commit_not_executed(mock_0, MOCK_0)
+        command_list = CommandSequential(mock_0, mock_1, mock_2)
+        self.assertRaises(CommandExecutionException, command_list, False)
+        self.assert_command_executed(mock_0, MOCK_0)
         self.assert_command_only_commit_not_executed(mock_1, MOCK_1)
-        self.assert_command_only_commit_not_executed(mock_2, MOCK_2)
+        self.assert_command_executed(mock_2, MOCK_2)
         self.assertDictEqual({ERROR_KEY: ERROR_MSG}, command_list.errors)
 
     def test_execute_business_stopping_on_error(self):
         MOCK_1 = "mock 1"
         MOCK_2 = "mock 2"
-        command_list = CommandParallel(CommandMock(MOCK_1, ERROR_KEY, ERROR_MSG), CommandMock(MOCK_2))
+        command_list = CommandSequential(CommandMock(MOCK_1, ERROR_KEY, ERROR_MSG), CommandMock(MOCK_2))
         self.assertRaises(CommandExecutionException, command_list.execute, True)
         self.assert_command_only_commit_not_executed(command_list[0], MOCK_1)
-        self.assert_command_only_setup_executed(command_list[1])
+        self.assert_command_not_executed(command_list[1])
         self.assertDictEqual({ERROR_KEY: ERROR_MSG}, command_list.errors)
 
     def test_execute_errors_msgs(self):
         MOCK_0 = "mock 0"
         MOCK_1 = "mock 1"
         MOCK_2 = "mock 2"
-        command_list = CommandParallel(CommandMock(MOCK_0, ERROR_KEY, ERROR_MSG),
-                                       CommandMock(MOCK_1, ANOTHER_ERROR_KEY, ANOTHER_ERROR_MSG),
-                                       CommandMock(MOCK_2))
+        command_list = CommandSequential(CommandMock(MOCK_0, ERROR_KEY, ERROR_MSG),
+                                         CommandMock(MOCK_1, ANOTHER_ERROR_KEY, ANOTHER_ERROR_MSG),
+                                         CommandMock(MOCK_2))
         self.assertRaises(CommandExecutionException, command_list.execute, False)
-        for cmd, m in izip(command_list, [MOCK_0, MOCK_1, MOCK_2]):
+        for cmd, m in izip(command_list[:-1], [MOCK_0, MOCK_1]):
             self.assert_command_only_commit_not_executed(cmd, m)
+        self.assert_command_executed(command_list[-1],MOCK_2)
         self.assertDictEqual({ANOTHER_ERROR_KEY: ANOTHER_ERROR_MSG, ERROR_KEY: ERROR_MSG}, command_list.errors)
 
 
     def test_commit(self):
-        class CommadParallelMock(CommandParallel):
+        class CommadSequentialMock(CommandSequential):
             def __init__(self, ):
-                super(CommadParallelMock, self).__init__(Command())
+                super(CommadSequentialMock, self).__init__(Command())
                 self._to_commit = ModelMock()
 
-        cmd = CommadParallelMock()
+        cmd = CommadSequentialMock()
         cmd()
         self.assertIsNotNone(ModelMock.query().get())
 
