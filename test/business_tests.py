@@ -183,6 +183,17 @@ class BusinessTests(GAETestCase):
         self.assertDictEqual({ANOTHER_ERROR_KEY: ANOTHER_ERROR_MSG}, command_list.errors)
 
 
+    def test_commit(self):
+        class CommadListMock(CommandList):
+            def __init__(self, ):
+                super(CommadListMock, self).__init__([Command()])
+                self._to_commit = ModelMock()
+
+        cmd = CommadListMock()
+        cmd()
+        self.assertIsNotNone(ModelMock.query().get())
+
+
 class DeleteCommnadTests(GAETestCase):
     def test_delete(self):
         model = mommy.save_one(ModelStub)

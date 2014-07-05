@@ -102,7 +102,10 @@ class CommandList(Command):
         self.result = self.__main_command.result
 
     def commit(self):
-        to_commit = []
+        models = to_model_list(super(CommandList, self).commit())
         for cmd in self:
-            to_commit.extend(to_model_list(cmd.commit()))
-        return to_commit
+            models.extend(to_model_list(cmd.commit()))
+        return models
+
+
+
