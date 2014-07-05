@@ -43,12 +43,13 @@ class Command(object):
         '''
         Must return a Model, or a list of it to be commited on DB
         '''
-        return self._to_commit
+        if not self.errors:
+            return self._to_commit
 
     def execute(self, stop_on_error=True):
         self.set_up()
         self.do_business(stop_on_error)
-        if self.errors and stop_on_error:
+        if self.errors:
             raise CommandExecutionException(unicode(self.errors))
         ndb.put_multi(to_model_list(self.commit()))
         return self
