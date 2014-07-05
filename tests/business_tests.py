@@ -53,22 +53,17 @@ class CommandTests(GAETestCase):
         self.assertIsNone(cmd.commit())
 
     def test_update_errors(self):
-        cmd=Command()
-        self.assertDictEqual({},cmd.errors)
-        errors={'foo':'foomsg'}
+        cmd = Command()
+        self.assertDictEqual({}, cmd.errors)
+        errors = {'foo': 'foomsg'}
         cmd.update_errors(**errors)
-        self.assertDictEqual(errors,cmd.errors)
-        errors['bar']='barmsg'
+        self.assertDictEqual(errors, cmd.errors)
+        errors['bar'] = 'barmsg'
         cmd.update_errors(**errors)
-        self.assertDictEqual(errors,cmd.errors)
+        self.assertDictEqual(errors, cmd.errors)
 
 
-class CommandParallelTests(GAETestCase):
-    def test_execute_chaining(self):
-        self.assertEqual('foo', CommandMock('foo').execute().result.ppt)
-        self.assertEqual('bar', CommandMock('bar')().ppt)
-
-
+class CommandListTest(GAETestCase):
     def assert_command_executed(self, command, model_ppt):
         self.assertTrue(command.set_up_executed)
         self.assertTrue(command.business_executed)
@@ -96,6 +91,12 @@ class CommandParallelTests(GAETestCase):
         self.assertFalse(command.business_executed)
         self.assertFalse(command.commit_executed)
         self.assertIsNone(command.result)
+
+
+class CommandParallelTests(CommandListTest):
+    def test_execute_chaining(self):
+        self.assertEqual('foo', CommandMock('foo').execute().result.ppt)
+        self.assertEqual('bar', CommandMock('bar')().ppt)
 
 
     def test_execute_successful_business(self):

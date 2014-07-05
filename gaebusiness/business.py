@@ -22,7 +22,7 @@ class Command(object):
         self.result = None
         self._to_commit = None
 
-    def update_error(self,**errors):
+    def update_errors(self, **errors):
         return self.errors.update(errors)
 
 
