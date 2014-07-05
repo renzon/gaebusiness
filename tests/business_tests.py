@@ -46,15 +46,6 @@ class CommandMockWithErrorOnBusiness(CommandMock):
 
 
 class CommandParallelTests(GAETestCase):
-    def test__add__(self):
-        mock0 = CommandMock('')
-        mock1 = CommandMock('')
-        mock2 = CommandMock('')
-        cmdlist = CommandParallel(mock0, mock1, mock2)
-        self.assertIs(mock0, cmdlist[0])
-        self.assertIs(mock1, cmdlist[1])
-        self.assertIs(mock2, cmdlist[2])
-
     def test_execute_chaining(self):
         self.assertEqual('foo', CommandMock('foo').execute().result.ppt)
 
@@ -160,7 +151,7 @@ class CommandParallelTests(GAETestCase):
         MOCK_1 = "mock 1"
         MOCK_2 = "mock 2"
         command_list = CommandParallel(CommandMockWithErrorOnBusiness(MOCK_0), CommandMock(MOCK_1, True),
-                                   CommandMock(MOCK_2))
+                                       CommandMock(MOCK_2))
         self.assertRaises(CommandExecutionException, command_list.execute, True)
         for cmd in command_list:
             self.assert_usecase_not_executed(cmd)

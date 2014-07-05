@@ -23,13 +23,6 @@ class Command(object):
         self._to_commit = None
 
 
-    def __add__(self, other):
-        try:
-            other.insert(0, self)
-            return other
-        except AttributeError:
-            return CommandParallel([self, other])
-
     def add_error(self, key, msg):
         self.errors[key] = msg
 
@@ -70,16 +63,6 @@ class CommandParallel(Command):
         super(CommandParallel, self).__init__()
         self.__commands = list(commands)
 
-    def _insert(self, index, element):
-        self.__commands.insert(index, element)
-
-    def __add__(self, command):
-        if isinstance(command, Command):
-            self.__commands.append(command)
-        else:
-            self.__commands.extend(command.__commands)
-        self.__main_command = self[-1]
-        return self
 
     def __getitem__(self, index):
         return self.__commands[index]
