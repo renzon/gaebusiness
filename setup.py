@@ -15,7 +15,7 @@ def read(fname):
 # of replicating them:
 standard_exclude = ["*.py", "*.pyc", "*$py.class", "*~", ".*", "*.bak"]
 standard_exclude_directories = [
-    ".*", "CVS", "_darcs", "./build", "./dist", "EGG-INFO", "*.egg-info"
+    ".*", "CVS", "_darcs", "./build", "./dist", "EGG-INFO", "*.egg-info","./venv"
 ]
 
 

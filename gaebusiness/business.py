@@ -66,10 +66,9 @@ class Command(object):
 
 
 class CommandList(Command):
-    def __init__(self, commands, main_command=None):
+    def __init__(self, *commands):
         super(CommandList, self).__init__()
-        self.__commands = commands
-        self.__main_command = main_command or self[-1]
+        self.__commands = list(commands)
 
     def _insert(self, index, element):
         self.__commands.insert(index, element)
@@ -95,11 +94,13 @@ class CommandList(Command):
                 cmd.do_business(stop_on_error)
             self.errors.update(cmd.errors)
             if stop_on_error and self.errors:
-                self.result = self.__main_command.result
                 raise CommandExecutionException(unicode(self.errors))
         if self.errors:
             raise CommandExecutionException(unicode(self.errors))
-        self.result = self.__main_command.result
+        try:
+            self.result = self[-1].result
+        except:
+            pass
 
     def commit(self):
         models = to_model_list(super(CommandList, self).commit())

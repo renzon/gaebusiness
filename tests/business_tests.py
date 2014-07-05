@@ -50,7 +50,7 @@ class BusinessTests(GAETestCase):
         mock0 = CommandMock('')
         mock1 = CommandMock('')
         mock2 = CommandMock('')
-        cmdlist = mock0 + mock1 + mock2
+        cmdlist = CommandList(mock0, mock1, mock2)
         self.assertIs(mock0, cmdlist[0])
         self.assertIs(mock1, cmdlist[1])
         self.assertIs(mock2, cmdlist[2])
@@ -80,7 +80,7 @@ class BusinessTests(GAETestCase):
         MOCK_2 = "mock 2"
         mock_1 = CommandMock(MOCK_1)
         mock_2 = CommandMock(MOCK_2)
-        command_list = mock_1 + mock_2
+        command_list = CommandList(mock_1, mock_2)
         errors = command_list.execute().errors
         self.assert_usecase_executed(mock_1, MOCK_1)
         self.assert_usecase_executed(mock_2, MOCK_2)
@@ -91,7 +91,7 @@ class BusinessTests(GAETestCase):
         MOCK_2 = "mock 2"
         mock_1 = CommandMock(MOCK_1)
         mock_2 = CommandMock(MOCK_2)
-        command_list = mock_1 + mock_2
+        command_list = CommandList(mock_1, mock_2)
         result = command_list()
         errors = command_list.errors
         self.assert_usecase_executed(mock_1, MOCK_1)
@@ -100,29 +100,14 @@ class BusinessTests(GAETestCase):
         self.assertIsNotNone(result)
         self.assertEqual(result, command_list.result)
 
-    def test_explicit_main_command(self):
+
+    def test_implicit_return_last_command_result(self):
         MOCK_0 = "mock 0"
         MOCK_1 = "mock 1"
 
         class CommandListComposition(CommandList):
             def __init__(self, label, label_1):
-                main_command = CommandMock(label)
-                CommandList.__init__(self, main_command + CommandMock(label_1), main_command)
-
-        command_list = CommandListComposition(MOCK_0, MOCK_1)
-        errors = command_list.execute().errors
-        self.assert_usecase_executed(command_list[0], MOCK_0)
-        self.assert_usecase_executed(command_list[1], MOCK_1)
-        self.assertEqual(MOCK_0, command_list.result.ppt)
-        self.assertDictEqual({}, errors)
-
-    def test_implicit_main_command(self):
-        MOCK_0 = "mock 0"
-        MOCK_1 = "mock 1"
-
-        class CommandListComposition(CommandList):
-            def __init__(self, label, label_1):
-                CommandList.__init__(self, CommandMock(label) + CommandMock(label_1))
+                CommandList.__init__(self, CommandMock(label), CommandMock(label_1))
 
         command_list = CommandListComposition(MOCK_0, MOCK_1)
         errors = command_list.execute().errors
@@ -137,7 +122,7 @@ class BusinessTests(GAETestCase):
 
         class CommandListComposition(CommandList):
             def __init__(self, label, label_1):
-                CommandList.__init__(self, CommandMock(label) + CommandMock(label_1))
+                CommandList.__init__(self, CommandMock(label), CommandMock(label_1))
 
         command_list = CommandListComposition(MOCK_0, MOCK_1)
         errors = command_list.execute().errors
@@ -154,7 +139,7 @@ class BusinessTests(GAETestCase):
         mock_1 = CommandMock(MOCK_1, True)
         mock_2 = CommandMock(MOCK_2)
 
-        command_list = mock_0 + mock_1 + mock_2
+        command_list = CommandList(mock_0 , mock_1 , mock_2)
         self.assertRaises(CommandExecutionException, command_list.execute, False)
         self.assert_usecase_not_executed(mock_0)
         self.assert_usecase_not_executed(mock_1)
@@ -164,19 +149,18 @@ class BusinessTests(GAETestCase):
     def test_execute_business_stopping_on_error(self):
         MOCK_1 = "mock 1"
         MOCK_2 = "mock 2"
-        commands = [CommandMock(MOCK_1, True), CommandMock(MOCK_2)]
-        command_list = CommandList(commands)
+        command_list = CommandList(CommandMock(MOCK_1, True), CommandMock(MOCK_2))
         self.assertRaises(CommandExecutionException, command_list.execute, True)
-        self.assert_usecase_not_executed(commands[0])
-        self.assert_usecase_not_executed(commands[1])
+        self.assert_usecase_not_executed(command_list[0])
+        self.assert_usecase_not_executed(command_list[1])
         self.assertDictEqual({ERROR_KEY: ERROR_MSG}, command_list.errors)
 
     def test_execute_business_stopping_on_error_in_method_on_business(self):
         MOCK_0 = "mock 0"
         MOCK_1 = "mock 1"
         MOCK_2 = "mock 2"
-        commands = [CommandMockWithErrorOnBusiness(MOCK_0), CommandMock(MOCK_1, True), CommandMock(MOCK_2)]
-        command_list = CommandList(commands)
+        command_list = CommandList(CommandMockWithErrorOnBusiness(MOCK_0), CommandMock(MOCK_1, True),
+                                   CommandMock(MOCK_2))
         self.assertRaises(CommandExecutionException, command_list.execute, True)
         for cmd in command_list:
             self.assert_usecase_not_executed(cmd)
@@ -186,7 +170,7 @@ class BusinessTests(GAETestCase):
     def test_commit(self):
         class CommadListMock(CommandList):
             def __init__(self, ):
-                super(CommadListMock, self).__init__([Command()])
+                super(CommadListMock, self).__init__(Command())
                 self._to_commit = ModelMock()
 
         cmd = CommadListMock()
