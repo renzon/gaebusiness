@@ -62,15 +62,16 @@ class Command(object):
         return self.result
 
 
-class CommandParallel(Command):
+class CommandListBase(Command):
     def __init__(self, *commands):
-        super(CommandParallel, self).__init__()
+        super(CommandListBase, self).__init__()
         self.__commands = list(commands)
-
 
     def __getitem__(self, index):
         return self.__commands[index]
 
+
+class CommandParallel(CommandListBase):
     def set_up(self):
         for cmd in self:
             cmd.set_up()
