@@ -279,10 +279,10 @@ class HandlePreviousTests(unittest.TestCase):
         self.assert_handle_previous_not_called(sequential_cmds[0])
         self.assert_handler_previous_called_once(sequential_cmds[0], sequential_cmds[1])
         self.assert_handler_previous_called_once(sequential_cmds[1], sequential_cmds[2])
-        self.assert_handler_previous_called_once(sequential_cmds, parallel_cmds[0])
-        self.assert_handler_previous_called_once(sequential_cmds, parallel_cmds[1])
-        self.assert_handler_previous_called_once(sequential_cmds, parallel_cmds[2])
-        self.assert_handler_previous_called_once(parallel_cmds, cmd)
+        for cmd in parallel_cmds:
+            self.assert_handle_previous_not_called(cmd)
+
+        self.assert_handle_previous_not_called(cmd)
 
 
 class DeleteCommnadTests(GAETestCase):

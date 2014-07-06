@@ -83,9 +83,6 @@ class CommandListBase(Command):
         if self.errors:
             raise CommandExecutionException(unicode(self.errors))
 
-    def handle_previous(self, command):
-        self[0].handle_previous(command)
-
 
 class CommandParallel(CommandListBase):
     def set_up(self):
@@ -93,13 +90,9 @@ class CommandParallel(CommandListBase):
             cmd.set_up()
 
     def do_business(self):
-        previous_cmd = None
         for cmd in self:
-            if previous_cmd:
-                cmd.handle_previous(previous_cmd)
             cmd.do_business()
             self.update_errors(**cmd.errors)
-            previous_cmd = cmd
         self.raise_exception_if_errors()
         self.result = self[-1].result
 
@@ -108,6 +101,9 @@ class CommandParallel(CommandListBase):
         for cmd in self:
             models.extend(to_model_list(cmd.commit()))
         return models
+
+    def handle_previous(self, command):
+        [cmd.handle_previous(command) for cmd in self]
 
 
 class CommandSequential(CommandListBase):
@@ -123,3 +119,6 @@ class CommandSequential(CommandListBase):
                 self.update_errors(**cmd.errors)
                 raise e
         self.result = self[-1].result
+
+    def handle_previous(self, command):
+        self[0].handle_previous(command)
