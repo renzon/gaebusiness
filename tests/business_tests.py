@@ -242,14 +242,17 @@ class HandlePreviousTests(unittest.TestCase):
     def assert_handler_previous_called_once(self, previous, current):
         current.handle_previous.assert_called_once_with(previous)
 
-    def test_calls_on_sequential(self, clazz=CommandSequential):
-        sequential_cmds = clazz(*[cmd_with_handle_previous_mocked() for i in range(3)])
+    def test_calls_on_sequential(self):
+        sequential_cmds = CommandSequential(*[cmd_with_handle_previous_mocked() for i in range(3)])
         sequential_cmds()
         self.assert_handle_previous_not_called(sequential_cmds[0])
         self.assert_handler_previous_called_once(sequential_cmds[0], sequential_cmds[1])
 
     def test_calls_on_parallel(self):
-        self.test_calls_on_sequential(CommandParallel)
+        parallel_cmds = CommandParallel(*[cmd_with_handle_previous_mocked() for i in range(3)])
+        parallel_cmds()
+        for cmd in parallel_cmds:
+            self.assert_handle_previous_not_called(cmd)
 
     def test_mixing_commands_on_sequential(self):
         sequential_cmds = CommandSequential(*[cmd_with_handle_previous_mocked() for i in range(3)])
@@ -260,8 +263,8 @@ class HandlePreviousTests(unittest.TestCase):
 
         self.assert_handle_previous_not_called(cmd)
         self.assert_handler_previous_called_once(cmd, parallel_cmds[0])
-        self.assert_handler_previous_called_once(parallel_cmds[0], parallel_cmds[1])
-        self.assert_handler_previous_called_once(parallel_cmds[1], parallel_cmds[2])
+        self.assert_handler_previous_called_once(cmd, parallel_cmds[1])
+        self.assert_handler_previous_called_once(cmd, parallel_cmds[2])
         self.assert_handler_previous_called_once(parallel_cmds, sequential_cmds[0])
         self.assert_handler_previous_called_once(sequential_cmds[0], sequential_cmds[1])
         self.assert_handler_previous_called_once(sequential_cmds[1], sequential_cmds[2])
@@ -271,15 +274,15 @@ class HandlePreviousTests(unittest.TestCase):
         parallel_cmds = CommandParallel(*[cmd_with_handle_previous_mocked() for i in range(3)])
         cmd = cmd_with_handle_previous_mocked()
 
-        CommandParallel(*[sequential_cmds, cmd, parallel_cmds]).execute()
+        CommandParallel(*[sequential_cmds, parallel_cmds, cmd]).execute()
 
         self.assert_handle_previous_not_called(sequential_cmds[0])
         self.assert_handler_previous_called_once(sequential_cmds[0], sequential_cmds[1])
         self.assert_handler_previous_called_once(sequential_cmds[1], sequential_cmds[2])
-        self.assert_handler_previous_called_once(sequential_cmds, cmd)
-        self.assert_handler_previous_called_once(cmd, parallel_cmds[0])
-        self.assert_handler_previous_called_once(parallel_cmds[0], parallel_cmds[1])
-        self.assert_handler_previous_called_once(parallel_cmds[1], parallel_cmds[2])
+        self.assert_handler_previous_called_once(sequential_cmds, parallel_cmds[0])
+        self.assert_handler_previous_called_once(sequential_cmds, parallel_cmds[1])
+        self.assert_handler_previous_called_once(sequential_cmds, parallel_cmds[2])
+        self.assert_handler_previous_called_once(parallel_cmds, cmd)
 
 
 class DeleteCommnadTests(GAETestCase):
