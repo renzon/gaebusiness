@@ -53,7 +53,7 @@ class CommandTests(GAETestCase):
 
     def test_not_commiting_on_error(self):
         cmd = CommandMock('foo', True)
-        self.assertRaises(CommandExecutionException, cmd, False)
+        self.assertRaises(CommandExecutionException, cmd)
         self.assertIsNone(cmd.commit())
 
     def test_update_errors(self):
@@ -125,7 +125,7 @@ class CommandParallelTests(CommandListTest):
         self.assertEqual(result, command_list.result)
 
 
-    def test_execute_business_not_stopping_on_error(self):
+    def test_execute_with_error(self):
         MOCK_0 = "mock 0"
         MOCK_1 = "mock 1"
         MOCK_2 = "mock 2"
@@ -134,20 +134,11 @@ class CommandParallelTests(CommandListTest):
         mock_2 = CommandMock(MOCK_2)
 
         command_list = CommandParallel(mock_0, mock_1, mock_2)
-        self.assertRaises(CommandExecutionException, command_list.execute, False)
-        self.assert_command_only_commit_not_executed(mock_0, MOCK_0)
-        self.assert_command_only_commit_not_executed(mock_1, MOCK_1)
-        self.assert_command_only_commit_not_executed(mock_2, MOCK_2)
+        self.assertRaises(CommandExecutionException, command_list.execute)
+        for cmd, m in izip(command_list, [MOCK_0, MOCK_1, MOCK_2]):
+            self.assert_command_only_commit_not_executed(cmd, m)
         self.assertDictEqual({ERROR_KEY: ERROR_MSG}, command_list.errors)
 
-    def test_execute_business_stopping_on_error(self):
-        MOCK_1 = "mock 1"
-        MOCK_2 = "mock 2"
-        command_list = CommandParallel(CommandMock(MOCK_1, ERROR_KEY, ERROR_MSG), CommandMock(MOCK_2))
-        self.assertRaises(CommandExecutionException, command_list.execute, True)
-        self.assert_command_only_commit_not_executed(command_list[0], MOCK_1)
-        self.assert_command_only_setup_executed(command_list[1])
-        self.assertDictEqual({ERROR_KEY: ERROR_MSG}, command_list.errors)
 
     def test_execute_errors_msgs(self):
         MOCK_0 = "mock 0"
@@ -156,7 +147,7 @@ class CommandParallelTests(CommandListTest):
         command_list = CommandParallel(CommandMock(MOCK_0, ERROR_KEY, ERROR_MSG),
                                        CommandMock(MOCK_1, ANOTHER_ERROR_KEY, ANOTHER_ERROR_MSG),
                                        CommandMock(MOCK_2))
-        self.assertRaises(CommandExecutionException, command_list.execute, False)
+        self.assertRaises(CommandExecutionException, command_list.execute)
         for cmd, m in izip(command_list, [MOCK_0, MOCK_1, MOCK_2]):
             self.assert_command_only_commit_not_executed(cmd, m)
         self.assertDictEqual({ANOTHER_ERROR_KEY: ANOTHER_ERROR_MSG, ERROR_KEY: ERROR_MSG}, command_list.errors)
@@ -201,26 +192,11 @@ class CommandSequentialTests(CommandListTest):
         self.assertEqual(result, command_list.result)
 
 
-    def test_execute_business_not_stopping_on_error(self):
-        MOCK_0 = "mock 0"
-        MOCK_1 = "mock 1"
-        MOCK_2 = "mock 2"
-        mock_0 = CommandMock(MOCK_0)
-        mock_1 = CommandMock(MOCK_1, ERROR_KEY, ERROR_MSG)
-        mock_2 = CommandMock(MOCK_2)
-
-        command_list = CommandSequential(mock_0, mock_1, mock_2)
-        self.assertRaises(CommandExecutionException, command_list, False)
-        self.assert_command_executed(mock_0, MOCK_0)
-        self.assert_command_only_commit_not_executed(mock_1, MOCK_1)
-        self.assert_command_executed(mock_2, MOCK_2)
-        self.assertDictEqual({ERROR_KEY: ERROR_MSG}, command_list.errors)
-
-    def test_execute_business_stopping_on_error(self):
+    def test_execute_business_with_error(self):
         MOCK_1 = "mock 1"
         MOCK_2 = "mock 2"
         command_list = CommandSequential(CommandMock(MOCK_1, ERROR_KEY, ERROR_MSG), CommandMock(MOCK_2))
-        self.assertRaises(CommandExecutionException, command_list.execute, True)
+        self.assertRaises(CommandExecutionException, command_list.execute)
         self.assert_command_only_commit_not_executed(command_list[0], MOCK_1)
         self.assert_command_not_executed(command_list[1])
         self.assertDictEqual({ERROR_KEY: ERROR_MSG}, command_list.errors)
@@ -232,11 +208,11 @@ class CommandSequentialTests(CommandListTest):
         command_list = CommandSequential(CommandMock(MOCK_0, ERROR_KEY, ERROR_MSG),
                                          CommandMock(MOCK_1, ANOTHER_ERROR_KEY, ANOTHER_ERROR_MSG),
                                          CommandMock(MOCK_2))
-        self.assertRaises(CommandExecutionException, command_list.execute, False)
-        for cmd, m in izip(command_list[:-1], [MOCK_0, MOCK_1]):
-            self.assert_command_only_commit_not_executed(cmd, m)
-        self.assert_command_executed(command_list[-1],MOCK_2)
-        self.assertDictEqual({ANOTHER_ERROR_KEY: ANOTHER_ERROR_MSG, ERROR_KEY: ERROR_MSG}, command_list.errors)
+        self.assertRaises(CommandExecutionException, command_list.execute)
+        self.assert_command_only_commit_not_executed(command_list[0], MOCK_0)
+        for cmd, m in izip(command_list[1:], [MOCK_1, MOCK_2]):
+            self.assert_command_not_executed(cmd)
+        self.assertDictEqual({ERROR_KEY: ERROR_MSG}, command_list.errors)
 
 
     def test_commit(self):

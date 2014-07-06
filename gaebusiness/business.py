@@ -36,7 +36,7 @@ class Command(object):
         '''
         pass
 
-    def do_business(self, stop_on_error=True):
+    def do_business(self):
         '''
         Must do the main business of use case
         '''
@@ -49,16 +49,16 @@ class Command(object):
         if not self.errors:
             return self._to_commit
 
-    def execute(self, stop_on_error=True):
+    def execute(self):
         self.set_up()
-        self.do_business(stop_on_error)
+        self.do_business()
         if self.errors:
             raise CommandExecutionException(unicode(self.errors))
         ndb.put_multi(to_model_list(self.commit()))
         return self
 
-    def __call__(self, stop_on_error=True):
-        self.execute(stop_on_error)
+    def __call__(self):
+        self.execute()
         return self.result
 
 
@@ -80,13 +80,10 @@ class CommandParallel(CommandListBase):
         for cmd in self:
             cmd.set_up()
 
-    def do_business(self, stop_on_error=True):
+    def do_business(self):
         for cmd in self:
-            if not cmd.errors:
-                cmd.do_business(stop_on_error)
+            cmd.do_business()
             self.update_errors(**cmd.errors)
-            if stop_on_error:
-                self.raise_exception_if_errors()
         self.raise_exception_if_errors()
         self.result = self[-1].result
 
@@ -98,21 +95,11 @@ class CommandParallel(CommandListBase):
 
 
 class CommandSequential(CommandListBase):
-    def do_business(self, stop_on_error=True):
-        if stop_on_error:
-            for cmd in self:
-                try:
-                    cmd()
-                except CommandExecutionException, e:
-                    self.update_errors(**cmd.errors)
-                    raise e
-            self.result = self[-1].result
-        else:
-            for cmd in self:
-                try:
-                    cmd()
-                except CommandExecutionException:
-                    self.update_errors(**cmd.errors)
-            self.result = self[-1].result
-            self.raise_exception_if_errors()
-
+    def do_business(self):
+        for cmd in self:
+            try:
+                cmd()
+            except CommandExecutionException, e:
+                self.update_errors(**cmd.errors)
+                raise e
+        self.result = self[-1].result
