@@ -30,24 +30,33 @@ class Command(object):
         self.errors[key] = msg
 
     def set_up(self):
-        '''
+        """
         Must set_up data for business.
         It should fetch data asyncrounously if needed
-        '''
+        """
         pass
 
     def do_business(self):
-        '''
+        """
         Must do the main business of use case
-        '''
+        """
         pass
 
     def commit(self):
-        '''
-        Must return a Model, or a list of it to be commited on DB
-        '''
+        """
+        Must return a Model, or a list of it to be committed on DB
+        """
         if not self.errors:
             return self._to_commit
+
+    def handle_previous(self, command):
+        """
+        Method called when commands are executed in sequence or parallel, so next command can access the previous
+        just before executing do_business method. Override it if you need previous data
+        :param command: previous command
+        :return: None
+        """
+        pass
 
     def execute(self):
         self.set_up()
@@ -74,6 +83,9 @@ class CommandListBase(Command):
         if self.errors:
             raise CommandExecutionException(unicode(self.errors))
 
+    def handle_previous(self, command):
+        self[0].handle_previous(command)
+
 
 class CommandParallel(CommandListBase):
     def set_up(self):
@@ -81,9 +93,13 @@ class CommandParallel(CommandListBase):
             cmd.set_up()
 
     def do_business(self):
+        previous_cmd = None
         for cmd in self:
+            if previous_cmd:
+                cmd.handle_previous(previous_cmd)
             cmd.do_business()
             self.update_errors(**cmd.errors)
+            previous_cmd = cmd
         self.raise_exception_if_errors()
         self.result = self[-1].result
 
@@ -96,9 +112,13 @@ class CommandParallel(CommandListBase):
 
 class CommandSequential(CommandListBase):
     def do_business(self):
+        previous_cmd = None
         for cmd in self:
             try:
                 cmd()
+                if previous_cmd:
+                    cmd.handle_previous(previous_cmd)
+                previous_cmd = cmd
             except CommandExecutionException, e:
                 self.update_errors(**cmd.errors)
                 raise e

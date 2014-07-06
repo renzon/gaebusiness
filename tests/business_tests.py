@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, unicode_literals
 from itertools import izip
+import unittest
 from google.appengine.ext import ndb
 from gaebusiness.business import Command, CommandParallel, CommandExecutionException, CommandSequential
 from gaebusiness.gaeutil import DeleteCommand
 from gaeutil_tests import ModelStub
+from mock import Mock
 from mommygae import mommy
 from util import GAETestCase
 
@@ -226,6 +228,60 @@ class CommandSequentialTests(CommandListTest):
         self.assertIsNotNone(ModelMock.query().get())
 
 
+def cmd_with_handle_previous_mocked():
+    c = Command()
+    c.handle_previous = Mock()
+    return c
+
+
+class HandlePreviousTests(unittest.TestCase):
+    def assert_handle_previous_not_called(self, cmd):
+        self.assertFalse(cmd.handle_previous.called)
+
+
+    def assert_handler_previous_called_once(self, previous, current):
+        current.handle_previous.assert_called_once_with(previous)
+
+    def test_calls_on_sequential(self, clazz=CommandSequential):
+        sequential_cmds = clazz(*[cmd_with_handle_previous_mocked() for i in range(3)])
+        sequential_cmds()
+        self.assert_handle_previous_not_called(sequential_cmds[0])
+        self.assert_handler_previous_called_once(sequential_cmds[0], sequential_cmds[1])
+
+    def test_calls_on_parallel(self):
+        self.test_calls_on_sequential(CommandParallel)
+
+    def test_mixing_commands_on_sequential(self):
+        sequential_cmds = CommandSequential(*[cmd_with_handle_previous_mocked() for i in range(3)])
+        parallel_cmds = CommandParallel(*[cmd_with_handle_previous_mocked() for i in range(3)])
+        cmd = cmd_with_handle_previous_mocked()
+
+        CommandSequential(*[cmd, parallel_cmds, sequential_cmds]).execute()
+
+        self.assert_handle_previous_not_called(cmd)
+        self.assert_handler_previous_called_once(cmd, parallel_cmds[0])
+        self.assert_handler_previous_called_once(parallel_cmds[0], parallel_cmds[1])
+        self.assert_handler_previous_called_once(parallel_cmds[1], parallel_cmds[2])
+        self.assert_handler_previous_called_once(parallel_cmds, sequential_cmds[0])
+        self.assert_handler_previous_called_once(sequential_cmds[0], sequential_cmds[1])
+        self.assert_handler_previous_called_once(sequential_cmds[1], sequential_cmds[2])
+
+    def test_mixing_commands_on_parallel(self):
+        sequential_cmds = CommandSequential(*[cmd_with_handle_previous_mocked() for i in range(3)])
+        parallel_cmds = CommandParallel(*[cmd_with_handle_previous_mocked() for i in range(3)])
+        cmd = cmd_with_handle_previous_mocked()
+
+        CommandParallel(*[sequential_cmds, cmd, parallel_cmds]).execute()
+
+        self.assert_handle_previous_not_called(sequential_cmds[0])
+        self.assert_handler_previous_called_once(sequential_cmds[0], sequential_cmds[1])
+        self.assert_handler_previous_called_once(sequential_cmds[1], sequential_cmds[2])
+        self.assert_handler_previous_called_once(sequential_cmds, cmd)
+        self.assert_handler_previous_called_once(cmd, parallel_cmds[0])
+        self.assert_handler_previous_called_once(parallel_cmds[0], parallel_cmds[1])
+        self.assert_handler_previous_called_once(parallel_cmds[1], parallel_cmds[2])
+
+
 class DeleteCommnadTests(GAETestCase):
     def test_delete(self):
         model = mommy.save_one(ModelStub)
@@ -238,3 +294,5 @@ class DeleteCommnadTests(GAETestCase):
         self.assertListEqual(models, ndb.get_multi(model_keys))
         DeleteCommand(*model_keys).execute()
         self.assertListEqual([None, None, None], ndb.get_multi(model_keys))
+
+
