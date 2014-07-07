@@ -110,14 +110,14 @@ class CommandSequential(CommandListBase):
     def do_business(self):
         previous_cmd = None
         for cmd in self:
+            if previous_cmd:
+                cmd.handle_previous(previous_cmd)
             try:
                 cmd()
-                if previous_cmd:
-                    cmd.handle_previous(previous_cmd)
-                previous_cmd = cmd
             except CommandExecutionException, e:
                 self.update_errors(**cmd.errors)
                 raise e
+            previous_cmd = cmd
         self.result = self[-1].result
 
     def handle_previous(self, command):
