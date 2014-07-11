@@ -100,6 +100,16 @@ class CommandListTest(GAETestCase):
 
 
 class CommandParallelTests(CommandListTest):
+    def test_update_error_when_command_execution_exception_is_raised(self):
+        class RaiseCommand(Command):
+            def do_business(self):
+                self.add_error('key', 'msg')
+                raise CommandExecutionException()
+
+        cmd = CommandParallel(RaiseCommand())
+        self.assertRaises(CommandExecutionException, cmd)
+        self.assertDictEqual({'key': 'msg'}, cmd.errors)
+
     def test_execute_successful_business(self):
         MOCK_1 = "mock 1"
         MOCK_2 = "mock 2"
