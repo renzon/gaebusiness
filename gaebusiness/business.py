@@ -91,7 +91,10 @@ class CommandParallel(CommandListBase):
 
     def do_business(self):
         for cmd in self:
-            cmd.do_business()
+            try:
+                cmd.do_business()
+            except CommandExecutionException:
+                pass
             self.update_errors(**cmd.errors)
         self.raise_exception_if_errors()
         self.result = self[-1].result
