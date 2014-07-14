@@ -79,6 +79,12 @@ class CommandListBase(Command):
     def __getitem__(self, index):
         return self.__commands[index]
 
+    def __len__(self):
+        return len(self.__commands)
+
+    def __nonzero__(self):
+        return bool(self.__commands)
+
     def append(self, cmd):
         self.__commands.append(cmd)
 
@@ -104,7 +110,8 @@ class CommandParallel(CommandListBase):
                 pass
             self.update_errors(**cmd.errors)
         self.raise_exception_if_errors()
-        self.result = self[-1].result
+        if self:
+            self.result = self[-1].result
 
     def commit(self):
         models = to_model_list(super(CommandParallel, self).commit())
@@ -128,7 +135,8 @@ class CommandSequential(CommandListBase):
                 self.update_errors(**cmd.errors)
                 raise e
             previous_cmd = cmd
-        self.result = self[-1].result
+        if self:
+            self.result = self[-1].result
 
     def handle_previous(self, command):
         self[0].handle_previous(command)

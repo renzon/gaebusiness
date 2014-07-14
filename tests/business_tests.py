@@ -113,8 +113,23 @@ class CommandListTests(unittest.TestCase):
         for cmd, cmd_on_list in izip(cmds, cmd_list):
             self.assertEqual(cmd, cmd_on_list)
 
+    def test_len(self):
+        cmd = CommandListBase()
+        self.assertEqual(0, len(cmd))
+        cmd.append(Command())
+        self.assertEqual(1, len(cmd))
+
+    def test_bool(self):
+        cmd = CommandListBase()
+        self.assertFalse(bool(cmd))
+        cmd.append(Command())
+        self.assertTrue(bool(cmd))
+
 
 class CommandParallelTests(CommandBaseListTest):
+    def test_empty(self):
+        CommandParallel()()
+
     def test_update_error_when_command_execution_exception_is_raised(self):
         class RaiseCommand(Command):
             def do_business(self):
@@ -192,6 +207,9 @@ class CommandParallelTests(CommandBaseListTest):
 
 
 class CommandSequentialTests(CommandBaseListTest):
+    def test_empty(self):
+        CommandSequential()()
+
     def test_execute_successful_business(self):
         MOCK_1 = "mock 1"
         MOCK_2 = "mock 2"
