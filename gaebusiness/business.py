@@ -79,6 +79,13 @@ class CommandListBase(Command):
     def __getitem__(self, index):
         return self.__commands[index]
 
+    def append(self, cmd):
+        self.__commands.append(cmd)
+
+    def extend(self, cmds):
+        self.__commands.extend(cmds)
+
+
     def raise_exception_if_errors(self):
         if self.errors:
             raise CommandExecutionException(unicode(self.errors))

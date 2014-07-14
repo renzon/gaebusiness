@@ -3,7 +3,7 @@ from __future__ import absolute_import, unicode_literals
 from itertools import izip
 import unittest
 from google.appengine.ext import ndb
-from gaebusiness.business import Command, CommandParallel, CommandExecutionException, CommandSequential
+from gaebusiness.business import Command, CommandParallel, CommandExecutionException, CommandSequential, CommandListBase
 from gaebusiness.gaeutil import DeleteCommand
 from gaeutil_tests import ModelStub
 from mock import Mock
@@ -69,7 +69,7 @@ class CommandTests(GAETestCase):
         self.assertDictEqual(errors, cmd.errors)
 
 
-class CommandListTest(GAETestCase):
+class CommandBaseListTest(GAETestCase):
     def assert_command_executed(self, command, model_ppt):
         self.assertTrue(command.set_up_executed)
         self.assertTrue(command.business_executed)
@@ -99,7 +99,22 @@ class CommandListTest(GAETestCase):
         self.assertIsNone(command.result)
 
 
-class CommandParallelTests(CommandListTest):
+class CommandListTests(unittest.TestCase):
+    def test_append(self):
+        cmd_list = CommandListBase()
+        cmd = Command()
+        cmd_list.append(cmd)
+        self.assertEqual(cmd, cmd_list[0])
+
+    def test_extend(self):
+        cmd_list = CommandListBase()
+        cmds = [Command() for i in xrange(3)]
+        cmd_list.extend(cmds)
+        for cmd, cmd_on_list in izip(cmds, cmd_list):
+            self.assertEqual(cmd, cmd_on_list)
+
+
+class CommandParallelTests(CommandBaseListTest):
     def test_update_error_when_command_execution_exception_is_raised(self):
         class RaiseCommand(Command):
             def do_business(self):
@@ -176,7 +191,7 @@ class CommandParallelTests(CommandListTest):
         self.assertIsNotNone(ModelMock.query().get())
 
 
-class CommandSequentialTests(CommandListTest):
+class CommandSequentialTests(CommandBaseListTest):
     def test_execute_successful_business(self):
         MOCK_1 = "mock 1"
         MOCK_2 = "mock 2"
@@ -307,5 +322,3 @@ class DeleteCommnadTests(GAETestCase):
         self.assertListEqual(models, ndb.get_multi(model_keys))
         DeleteCommand(*model_keys).execute()
         self.assertListEqual([None, None, None], ndb.get_multi(model_keys))
-
-
