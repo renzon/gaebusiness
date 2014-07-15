@@ -180,7 +180,7 @@ class SaveCommand(Command):
     def do_business(self, stop_on_error=True):
         self.errors.update(self.form.validate())
         if not self.errors:
-            self.result = self.form.populate_model()
+            self.result = self.form.fill_model()
             self._to_commit = self.result
 
 
@@ -203,7 +203,7 @@ class UpdateCommand(SaveCommand):
         if not self.errors:
             self.old_model_properties = model.to_dict()
             self.result = model
-            self.form.populate_model(model)
+            self.form.fill_model(model)
             self._to_commit = model
 
 
@@ -221,7 +221,7 @@ class FindOrCreateCommand(SingleModelSearchCommand):
         if self.result is None:
             self.errors.update(self.form.validate())
             if not self.errors:
-                self.result = self.form.populate_model()
+                self.result = self.form.fill_model()
                 self._to_commit = self.result
 
 

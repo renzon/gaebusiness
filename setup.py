@@ -132,7 +132,7 @@ setup(
         "Framework :: Paste",
     ],
     zip_safe=False,
-    install_requires=['gaeforms>=0.3',
+    install_requires=['gaeforms>=0.5',
                       'pytz>=2014.4',
                       'Babel>=1.3']
 )
