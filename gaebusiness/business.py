@@ -127,7 +127,7 @@ class CommandSequential(CommandListBase):
     def do_business(self):
         previous_cmd = None
         for cmd in self:
-            if previous_cmd:
+            if previous_cmd is not None:
                 cmd.handle_previous(previous_cmd)
             try:
                 cmd()
