@@ -185,19 +185,23 @@ class SaveCommand(Command):
 
 
 class UpdateCommand(SaveCommand):
-    def __init__(self, model_key, **form_parameters):
+    def __init__(self, model_or_key, **form_parameters):
         super(UpdateCommand, self).__init__(**form_parameters)
-        self.model_key = model_key
+        self.__model=None
+        if isinstance(model_or_key,ndb.Model):
+            self.__model=model_or_key
+        self.model_key = model_or_key
         self._model_future = None
         self.old_model_properties = None
 
     def set_up(self):
         super(UpdateCommand, self).set_up()
-        self._model_future = self.model_key.get_async()
+        if self.__model is None:
+            self._model_future = self.model_key.get_async()
 
     def do_business(self, stop_on_error=True):
         self.errors.update(self.form.validate())
-        model = self._model_future.get_result()
+        model = self.__model or self._model_future.get_result()
         if model is None:
             self.add_error('model', 'Model with key %s does not exist' % self.model_key)
         if not self.errors:

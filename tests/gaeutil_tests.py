@@ -339,6 +339,20 @@ class UpdateCommandTests(GAETestCase):
         self.assertEqual('foo', model_on_db.name)
         self.assertEqual(31, model_on_db.age)
 
+    def test_success_with_model(self):
+        old_properties = {'name': 'old_foo', 'age': 26}
+        model = ModelStub(**old_properties)
+        model_key = model.put()
+
+        cmd = UpdateModelStubCommand(model, name='foo', age='31')
+        result = cmd()
+        self.assertIsNotNone(result)
+        self.assertEqual(model_key, result.key)
+        self.assertDictEqual(old_properties, cmd.old_model_properties)
+        model_on_db = result.key.get()
+        self.assertEqual('foo', model_on_db.name)
+        self.assertEqual(31, model_on_db.age)
+
 
 class FindOrCreateModelStubCommand(FindOrCreateCommand):
     _model_form_class = ModelStubForm
@@ -380,7 +394,7 @@ class FindOrCreateModelCommandTests(GAETestCase):
         self._assert_validation_errors(cmd, expected_error_keys)
 
         expected_error_keys = set(['age'])
-        cmd = FindOrCreateModelStubCommand(ModelStub.query(),name='foo')
+        cmd = FindOrCreateModelStubCommand(ModelStub.query(), name='foo')
         self._assert_validation_errors(cmd, expected_error_keys)
 
 
