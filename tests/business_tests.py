@@ -340,3 +340,20 @@ class DeleteCommnadTests(GAETestCase):
         self.assertListEqual(models, ndb.get_multi(model_keys))
         DeleteCommand(*model_keys).execute()
         self.assertListEqual([None, None, None], ndb.get_multi(model_keys))
+
+    def test_delete_not_ocurring_when_error_occurs_in_parallel(self):
+        class ErrorComand(Command):
+            def do_business(self):
+                self.add_error('error', 'Some error')
+
+        model = mommy.save_one(ModelStub)
+        self.assertIsNotNone(model.key.get())
+        delete_cmd = DeleteCommand(model.key)
+        delete_cmd
+        parallel_cmds=CommandParallel(delete_cmd, ErrorComand())
+        self.assertRaises(CommandExecutionException,parallel_cmds)
+
+        self.assertIsNotNone(model.key.get(), 'Should not delete entity if a error ocurr')
+
+        delete_cmd()  # Executing without errors
+        self.assertIsNone(model.key.get())
