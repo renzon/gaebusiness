@@ -50,6 +50,26 @@ class UrlfecthTests(unittest.TestCase):
         fetch.assert_called_once_with(rpc, '%s?%s' % (url, urllib.urlencode(params)), None, method=urlfetch.GET,
                                       validate_certificate=False, headers={})
 
+    def test_http_400(self, status_code=400):
+        params = {'id': 'foo', 'token': 'bar'}
+        url = 'http://foo.bar.com/rest'
+        rpc = Mock()
+        result = Mock()
+        result.status_code = status_code
+        result.content = '{"ticket":"123456"}'
+        rpc.get_result = Mock(return_value=result)
+        gaeutil.urlfetch.create_rpc = Mock(return_value=rpc)
+        fetch = Mock()
+        gaeutil.urlfetch.make_fetch_call = fetch
+        command = UrlFetchCommand(url, params, validate_certificate=False)
+        self.assertRaises(CommandExecutionException, command.execute)
+        self.assertEqual(result, command.result)
+        fetch.assert_called_once_with(rpc, '%s?%s' % (url, urllib.urlencode(params)), None, method=urlfetch.GET,
+                                      validate_certificate=False, headers={})
+
+    def test_http_404(self):
+        self.test_http_400(404)
+
 
 class TaskQueueTests(unittest.TestCase):
     def test_queue_creation(self):
