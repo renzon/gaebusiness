@@ -31,8 +31,12 @@ class UrlFetchCommand(Command):
         urlfetch.make_fetch_call(self._rpc, self.url, self.params, method=self.method,
                                  validate_certificate=self.validate_certificate, headers=self.headers)
 
+
     def do_business(self, stop_on_error=False):
         self.result = self._rpc.get_result()
+        http_code = self.result.status_code
+        if 400 <= http_code <= 499:
+            self.add_error('http', http_code)
 
 
 class TaskQueueCommand(Command):
@@ -187,9 +191,9 @@ class SaveCommand(Command):
 class UpdateCommand(SaveCommand):
     def __init__(self, model_or_key, **form_parameters):
         super(UpdateCommand, self).__init__(**form_parameters)
-        self.__model=None
-        if isinstance(model_or_key,ndb.Model):
-            self.__model=model_or_key
+        self.__model = None
+        if isinstance(model_or_key, ndb.Model):
+            self.__model = model_or_key
         self.model_key = model_or_key
         self._model_future = None
         self.old_model_properties = None
