@@ -66,6 +66,7 @@ class UrlfecthTests(unittest.TestCase):
         self.assertEqual(result, command.result)
         fetch.assert_called_once_with(rpc, '%s?%s' % (url, urllib.urlencode(params)), None, method=urlfetch.GET,
                                       validate_certificate=False, headers={})
+        self.assertDictEqual({'http': status_code, 'content': result.content}, command.errors)
 
     def test_http_404(self):
         self.test_http_400(404)
