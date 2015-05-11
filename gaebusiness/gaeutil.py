@@ -37,6 +37,7 @@ class UrlFetchCommand(Command):
         http_code = self.result.status_code
         if 400 <= http_code <= 499:
             self.add_error('http', http_code)
+            self.add_error('content', getattr(self.result, 'content', 'No content to show'))
 
 
 class TaskQueueCommand(Command):
